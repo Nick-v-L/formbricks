@@ -1,4 +1,4 @@
-name: Docker
+name: OwnBuild
 
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
@@ -6,10 +6,9 @@ name: Docker
 # documentation.
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - "v*"
+    branches:
+      - v*
 
 env:
   # Use docker.io for Docker Hub if empty
