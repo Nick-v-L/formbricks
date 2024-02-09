@@ -166,7 +166,7 @@ export default async function LinkSurveyPage({ params, searchParams }: LinkSurve
 
   let languageId;
   if (languageSymbol) {
-    languageId = product.languages.find((l) => l.alias === languageSymbol || l.id === languageSymbol).id;
+    languageId = product.languages.find((l) => l.alias === languageSymbol || l.id === languageSymbol).?id;
   }
   if (!languageId || !isSurveyAvailableInSelectedLanguage(languageId, survey)) {
     return <InvalidLanguage />;
