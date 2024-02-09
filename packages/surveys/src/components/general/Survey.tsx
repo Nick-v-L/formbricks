@@ -6,6 +6,7 @@ import { evaluateCondition } from "@/lib/logicEvaluator";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { formatDateWithOrdinal, isValidDateString } from "@formbricks/lib/utils/datetime";
 import { extractFallbackValue, extractId, extractRecallInfo } from "@formbricks/lib/utils/recall";
 import { SurveyBaseProps } from "@formbricks/types/formbricksSurveys";
@@ -28,9 +29,11 @@ export function Survey({
   onRetry = () => {},
   isRedirectDisabled = false,
   prefillResponseData,
+  languageId,
   getSetIsError,
   onFileUpload,
   responseCount,
+  defaultLanguageId,
 }: SurveyBaseProps) {
   const [questionId, setQuestionId] = useState(
     activeQuestionId || (survey.welcomeCard.enabled ? "start" : survey?.questions[0]?.id)
@@ -50,7 +53,7 @@ export function Survey({
     } else {
       return survey.questions.find((q) => q.id === questionId);
     }
-  }, [questionId, survey]);
+  }, [questionId, survey, history]);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const showProgressBar = !survey.styling?.hideProgressBar;
 
@@ -110,9 +113,16 @@ export function Survey({
           currentQuestion.type === "multipleChoiceSingle" ||
           currentQuestion.type === "multipleChoiceMulti"
         ) {
-          const choice = currentQuestion.choices.find((choice) => choice.label === responseValue);
+          const choice = currentQuestion.choices.find(
+            (choice) => getLocalizedValue(choice.label, languageId) === responseValue
+          );
+          if (choice) {
+            if (evaluateCondition(logic, getLocalizedValue(choice.label, defaultLanguageId))) {
+              return logic.destination;
+            }
+          }
           // if choice is undefined we can determine that, "other" option is selected
-          if (!choice) {
+          else {
             if (evaluateCondition(logic, "Other")) {
               return logic.destination;
             }
@@ -147,7 +157,7 @@ export function Survey({
     onActiveQuestionChange(nextQuestionId);
   };
 
-  const replaceRecallInfo = (text: string) => {
+  const replaceRecallInfo = (text: string): string => {
     while (text.includes("recall:")) {
       const recallInfo = extractRecallInfo(text);
       if (recallInfo) {
@@ -168,12 +178,20 @@ export function Survey({
   };
 
   const parseRecallInformation = (question: TSurveyQuestion) => {
-    const modifiedQuestion = { ...question };
-    if (question.headline.includes("recall:")) {
-      modifiedQuestion.headline = replaceRecallInfo(modifiedQuestion.headline);
+    const modifiedQuestion = structuredClone(question);
+    if (question.headline && question.headline[languageId]?.includes("recall:")) {
+      modifiedQuestion.headline[languageId] = replaceRecallInfo(
+        getLocalizedValue(modifiedQuestion.headline, languageId)
+      );
     }
-    if (question.subheader && question.subheader.includes("recall:")) {
-      modifiedQuestion.subheader = replaceRecallInfo(modifiedQuestion.subheader as string);
+    if (
+      question.subheader &&
+      question.subheader[languageId]?.includes("recall:") &&
+      modifiedQuestion.subheader
+    ) {
+      modifiedQuestion.subheader[languageId] = replaceRecallInfo(
+        getLocalizedValue(modifiedQuestion.subheader, languageId)
+      );
     }
     return modifiedQuestion;
   };
@@ -210,27 +228,22 @@ export function Survey({
           buttonLabel={survey.welcomeCard.buttonLabel}
           onSubmit={onSubmit}
           survey={survey}
+          languageId={languageId}
           responseCount={responseCount}
         />
       );
     } else if (questionId === "end" && survey.thankYouCard.enabled) {
       return (
         <ThankYouCard
-          headline={
-            typeof survey.thankYouCard.headline === "string"
-              ? replaceRecallInfo(survey.thankYouCard.headline)
-              : ""
-          }
-          subheader={
-            typeof survey.thankYouCard.subheader === "string"
-              ? replaceRecallInfo(survey.thankYouCard.subheader)
-              : ""
-          }
+          headline={survey.thankYouCard.headline}
+          subheader={survey.thankYouCard.subheader}
           buttonLabel={survey.thankYouCard.buttonLabel}
           buttonLink={survey.thankYouCard.buttonLink}
           imageUrl={survey.thankYouCard.imageUrl}
           redirectUrl={survey.redirectUrl}
           isRedirectDisabled={isRedirectDisabled}
+          languageId={languageId}
+          replaceRecallInfo={replaceRecallInfo}
         />
       );
     } else {
@@ -252,6 +265,7 @@ export function Survey({
                 : currentQuestion.id === survey?.questions[0]?.id
             }
             isLastQuestion={currentQuestion.id === survey.questions[survey.questions.length - 1].id}
+            languageId={languageId}
           />
         )
       );

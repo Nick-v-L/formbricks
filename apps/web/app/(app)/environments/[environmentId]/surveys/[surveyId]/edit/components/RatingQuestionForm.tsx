@@ -2,11 +2,12 @@ import { FaceSmileIcon, HashtagIcon, StarIcon } from "@heroicons/react/24/outlin
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
 
+import LocalizedInput from "@formbricks/ee/multiLanguage/components/LocalizedInput";
+import { createI18nString, extractLanguageIds } from "@formbricks/lib/i18n/utils";
+import { TLanguage } from "@formbricks/types/product";
 import { TSurvey, TSurveyRatingQuestion } from "@formbricks/types/surveys";
 import { Button } from "@formbricks/ui/Button";
-import { Input } from "@formbricks/ui/Input";
 import { Label } from "@formbricks/ui/Label";
-import QuestionFormInput from "@formbricks/ui/QuestionFormInput";
 
 import Dropdown from "./RatingTypeDropdown";
 
@@ -16,54 +17,70 @@ interface RatingQuestionFormProps {
   questionIdx: number;
   updateQuestion: (questionIdx: number, updatedAttributes: any) => void;
   lastQuestion: boolean;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
   isInvalid: boolean;
+  defaultLanguageId: string;
 }
 
 export default function RatingQuestionForm({
   question,
   questionIdx,
   updateQuestion,
-  lastQuestion,
   isInvalid,
   localSurvey,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
+  defaultLanguageId,
 }: RatingQuestionFormProps) {
   const [showSubheader, setShowSubheader] = useState(!!question.subheader);
-  const environmentId = localSurvey.environmentId;
+  const surveyLanguageIds = extractLanguageIds(surveyLanguages);
 
   return (
     <form>
-      <QuestionFormInput
+      <LocalizedInput
+        id="headline"
+        name="headline"
+        value={question.headline}
         localSurvey={localSurvey}
-        environmentId={environmentId}
-        isInvalid={isInvalid}
-        questionId={question.id}
         questionIdx={questionIdx}
+        surveyLanguages={surveyLanguages}
+        isInvalid={isInvalid}
         updateQuestion={updateQuestion}
-        type="headline"
+        selectedLanguageId={selectedLanguageId}
+        setSelectedLanguageId={setSelectedLanguageId}
+        defaultLanguageId={defaultLanguageId}
       />
 
       <div>
         {showSubheader && (
-          <>
-            <div className="flex w-full items-center">
-              <QuestionFormInput
+          <div className="mt-2 inline-flex w-full items-center">
+            <div className="w-full">
+              <LocalizedInput
+                id="subheader"
+                name="subheader"
+                value={question.subheader}
                 localSurvey={localSurvey}
-                environmentId={environmentId}
-                isInvalid={isInvalid}
-                questionId={question.id}
                 questionIdx={questionIdx}
+                surveyLanguages={surveyLanguages}
+                isInvalid={isInvalid}
                 updateQuestion={updateQuestion}
-                type="subheader"
-              />
-              <TrashIcon
-                className="ml-2 mt-10 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-500"
-                onClick={() => {
-                  setShowSubheader(false);
-                  updateQuestion(questionIdx, { subheader: "" });
-                }}
+                selectedLanguageId={selectedLanguageId}
+                setSelectedLanguageId={setSelectedLanguageId}
+                defaultLanguageId={defaultLanguageId}
               />
             </div>
-          </>
+
+            <TrashIcon
+              className="ml-2 mt-10 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-500"
+              onClick={() => {
+                setShowSubheader(false);
+                updateQuestion(questionIdx, { subheader: undefined });
+              }}
+            />
+          </div>
         )}
         {!showSubheader && (
           <Button
@@ -71,7 +88,13 @@ export default function RatingQuestionForm({
             variant="minimal"
             className="mt-3"
             type="button"
-            onClick={() => setShowSubheader(true)}>
+            onClick={() => {
+              updateQuestion(questionIdx, {
+                subheader: createI18nString("", surveyLanguageIds, defaultLanguageId),
+              });
+              setShowSubheader(true);
+            }}>
+            {" "}
             <PlusIcon className="mr-1 h-4 w-4" />
             Add Description
           </Button>
@@ -114,44 +137,56 @@ export default function RatingQuestionForm({
 
       <div className="mt-3 flex justify-between gap-8">
         <div className="flex-1">
-          <Label htmlFor="lowerLabel">Lower label</Label>
-          <div className="mt-2">
-            <Input
-              id="lowerLabel"
-              name="lowerLabel"
-              placeholder="Not good"
-              value={question.lowerLabel}
-              onChange={(e) => updateQuestion(questionIdx, { lowerLabel: e.target.value })}
-            />
-          </div>
+          <LocalizedInput
+            id="lowerLabel"
+            name="lowerLabel"
+            placeholder="Not good"
+            value={question.lowerLabel}
+            localSurvey={localSurvey}
+            questionIdx={questionIdx}
+            surveyLanguages={surveyLanguages}
+            isInvalid={isInvalid}
+            updateQuestion={updateQuestion}
+            selectedLanguageId={selectedLanguageId}
+            setSelectedLanguageId={setSelectedLanguageId}
+            defaultLanguageId={defaultLanguageId}
+          />
         </div>
         <div className="flex-1">
-          <Label htmlFor="upperLabel">Upper label</Label>
-          <div className="mt-2">
-            <Input
-              id="upperLabel"
-              name="upperLabel"
-              placeholder="Very satisfied"
-              value={question.upperLabel}
-              onChange={(e) => updateQuestion(questionIdx, { upperLabel: e.target.value })}
-            />
-          </div>
+          <LocalizedInput
+            id="upperLabel"
+            name="upperLabel"
+            placeholder="Very satisfied"
+            value={question.upperLabel}
+            localSurvey={localSurvey}
+            questionIdx={questionIdx}
+            surveyLanguages={surveyLanguages}
+            isInvalid={isInvalid}
+            updateQuestion={updateQuestion}
+            selectedLanguageId={selectedLanguageId}
+            setSelectedLanguageId={setSelectedLanguageId}
+            defaultLanguageId={defaultLanguageId}
+          />
         </div>
       </div>
 
       <div className="mt-3">
         {!question.required && (
           <div className="flex-1">
-            <Label htmlFor="buttonLabel">Dismiss Button Label</Label>
-            <div className="mt-2">
-              <Input
-                id="dismissButtonLabel"
-                name="dismissButtonLabel"
-                value={question.buttonLabel}
-                placeholder={lastQuestion ? "Finish" : "Next"}
-                onChange={(e) => updateQuestion(questionIdx, { buttonLabel: e.target.value })}
-              />
-            </div>
+            <LocalizedInput
+              id="buttonLabel"
+              name="buttonLabel"
+              value={question.buttonLabel}
+              localSurvey={localSurvey}
+              questionIdx={questionIdx}
+              placeholder={"skip"}
+              surveyLanguages={surveyLanguages}
+              isInvalid={isInvalid}
+              updateQuestion={updateQuestion}
+              selectedLanguageId={selectedLanguageId}
+              setSelectedLanguageId={setSelectedLanguageId}
+              defaultLanguageId={defaultLanguageId}
+            />
           </div>
         )}
       </div>

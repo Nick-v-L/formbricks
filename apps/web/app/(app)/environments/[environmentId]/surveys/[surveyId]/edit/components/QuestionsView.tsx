@@ -6,8 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import toast from "react-hot-toast";
 
+import { getDefaultLanguage, translateQuestion } from "@formbricks/lib/i18n/utils";
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { checkForEmptyFallBackValue, extractRecallInfo } from "@formbricks/lib/utils/recall";
-import { TProduct } from "@formbricks/types/product";
+import { TLanguage, TProduct } from "@formbricks/types/product";
 import { TSurvey, TSurveyQuestion } from "@formbricks/types/surveys";
 
 import AddQuestionButton from "./AddQuestionButton";
@@ -15,7 +17,7 @@ import EditThankYouCard from "./EditThankYouCard";
 import EditWelcomeCard from "./EditWelcomeCard";
 import QuestionCard from "./QuestionCard";
 import { StrictModeDroppable } from "./StrictModeDroppable";
-import { validateQuestion } from "./Validation";
+import { isLabelValidForAllLanguages, validateQuestion } from "./Validation";
 
 interface QuestionsViewProps {
   localSurvey: TSurvey;
@@ -25,6 +27,9 @@ interface QuestionsViewProps {
   product: TProduct;
   invalidQuestions: String[] | null;
   setInvalidQuestions: (invalidQuestions: String[] | null) => void;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
 }
 
 export default function QuestionsView({
@@ -35,6 +40,9 @@ export default function QuestionsView({
   product,
   invalidQuestions,
   setInvalidQuestions,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
 }: QuestionsViewProps) {
   const internalQuestionIdMap = useMemo(() => {
     return localSurvey.questions.reduce((acc, question) => {
@@ -44,11 +52,14 @@ export default function QuestionsView({
   }, [localSurvey.questions]);
 
   const [backButtonLabel, setbackButtonLabel] = useState(null);
-
+  const defaultLanguageId = getDefaultLanguage(product.languages).id;
   const handleQuestionLogicChange = (survey: TSurvey, compareId: string, updatedId: string): TSurvey => {
     survey.questions.forEach((question) => {
-      if (question.headline.includes(`recall:${compareId}`)) {
-        question.headline = question.headline.replaceAll(`recall:${compareId}`, `recall:${updatedId}`);
+      if (question.headline[selectedLanguageId].includes(`recall:${compareId}`)) {
+        question.headline[selectedLanguageId] = question.headline[selectedLanguageId].replaceAll(
+          `recall:${compareId}`,
+          `recall:${updatedId}`
+        );
       }
       if (!question.logic) return;
       question.logic.forEach((rule) => {
@@ -66,8 +77,8 @@ export default function QuestionsView({
     if (invalidQuestions === null) {
       return;
     }
-    let temp = JSON.parse(JSON.stringify(invalidQuestions));
-    if (validateQuestion(question)) {
+    let temp = structuredClone(invalidQuestions);
+    if (validateQuestion(question, surveyLanguages)) {
       temp = invalidQuestions.filter((id) => id !== question.id);
       setInvalidQuestions(temp);
     } else if (!invalidQuestions.includes(question.id)) {
@@ -94,7 +105,6 @@ export default function QuestionsView({
       delete internalQuestionIdMap[localSurvey.questions[questionIdx].id];
       setActiveQuestionId(updatedAttributes.id);
     }
-
     updatedSurvey.questions[questionIdx] = {
       ...updatedSurvey.questions[questionIdx],
       ...updatedAttributes,
@@ -117,10 +127,13 @@ export default function QuestionsView({
 
     // check if we are recalling from this question
     updatedSurvey.questions.forEach((question) => {
-      if (question.headline.includes(`recall:${questionId}`)) {
-        const recallInfo = extractRecallInfo(question.headline);
+      if (question.headline[selectedLanguageId].includes(`recall:${questionId}`)) {
+        const recallInfo = extractRecallInfo(getLocalizedValue(question.headline, selectedLanguageId));
         if (recallInfo) {
-          question.headline = question.headline.replace(recallInfo, "");
+          question.headline[selectedLanguageId] = question.headline[selectedLanguageId].replace(
+            recallInfo,
+            ""
+          );
         }
       }
     });
@@ -140,7 +153,7 @@ export default function QuestionsView({
   };
 
   const duplicateQuestion = (questionIdx: number) => {
-    const questionToDuplicate = JSON.parse(JSON.stringify(localSurvey.questions[questionIdx]));
+    const questionToDuplicate = structuredClone(localSurvey.questions[questionIdx]);
 
     const newQuestionId = createId();
 
@@ -166,8 +179,9 @@ export default function QuestionsView({
     if (backButtonLabel) {
       question.backButtonLabel = backButtonLabel;
     }
-
-    updatedSurvey.questions.push({ ...question, isDraft: true });
+    const languageSymbols = Object.keys(surveyLanguages);
+    const translatedSurvey = translateQuestion(question, languageSymbols, defaultLanguageId);
+    updatedSurvey.questions.push({ ...translatedSurvey, isDraft: true });
 
     setLocalSurvey(updatedSurvey);
     setActiveQuestionId(question.id);
@@ -195,7 +209,54 @@ export default function QuestionsView({
   };
 
   useEffect(() => {
-    const questionWithEmptyFallback = checkForEmptyFallBackValue(localSurvey);
+    if (invalidQuestions === null) return;
+
+    const isCardValid = (card, cardType) => {
+      if (cardType === "start") {
+        // welcomeCard identified as "start"
+        return (
+          isLabelValidForAllLanguages(card.headline, surveyLanguages) &&
+          (card.html && card.html[defaultLanguageId] === ""
+            ? true
+            : isLabelValidForAllLanguages(card.html, surveyLanguages)) &&
+          (card.buttonLabel && card.buttonLabel[defaultLanguageId] === ""
+            ? true
+            : isLabelValidForAllLanguages(card.buttonLabel, surveyLanguages))
+        );
+      } else if (cardType === "end") {
+        // thankYouCard identified as "end"
+        return (
+          isLabelValidForAllLanguages(card.headline, surveyLanguages) &&
+          (card.subheader && card.subheader[defaultLanguageId] === ""
+            ? true
+            : isLabelValidForAllLanguages(card.subheader, surveyLanguages))
+        );
+      }
+      return true;
+    };
+
+    const updateInvalidQuestions = (card, cardId, currentInvalidQuestions) => {
+      if (card.enabled && !isCardValid(card, cardId)) {
+        return currentInvalidQuestions.includes(cardId)
+          ? currentInvalidQuestions
+          : [...currentInvalidQuestions, cardId];
+      }
+      return currentInvalidQuestions.filter((id) => id !== cardId);
+    };
+
+    const updatedQuestionsStart = updateInvalidQuestions(localSurvey.welcomeCard, "start", invalidQuestions);
+    const updatedQuestionsEnd = updateInvalidQuestions(
+      localSurvey.thankYouCard,
+      "end",
+      updatedQuestionsStart
+    );
+
+    setInvalidQuestions(updatedQuestionsEnd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localSurvey.welcomeCard, localSurvey.thankYouCard]);
+
+  useEffect(() => {
+    const questionWithEmptyFallback = checkForEmptyFallBackValue(localSurvey, selectedLanguageId);
     if (questionWithEmptyFallback) {
       setActiveQuestionId(questionWithEmptyFallback.id);
       if (activeQuestionId === questionWithEmptyFallback.id) {
@@ -206,13 +267,18 @@ export default function QuestionsView({
   }, [activeQuestionId, setActiveQuestionId]);
 
   return (
-    <div className="mt-12 px-5 py-4">
+    <div className="px-5 py-4">
       <div className="mb-5 flex flex-col gap-5">
         <EditWelcomeCard
           localSurvey={localSurvey}
           setLocalSurvey={setLocalSurvey}
           setActiveQuestionId={setActiveQuestionId}
           activeQuestionId={activeQuestionId}
+          isInvalid={invalidQuestions ? invalidQuestions.includes("start") : false}
+          surveyLanguages={surveyLanguages}
+          setSelectedLanguageId={setSelectedLanguageId}
+          selectedLanguageId={selectedLanguageId}
+          defaultLanguageId={defaultLanguageId}
         />
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
@@ -230,10 +296,13 @@ export default function QuestionsView({
                     moveQuestion={moveQuestion}
                     updateQuestion={updateQuestion}
                     duplicateQuestion={duplicateQuestion}
+                    selectedLanguageId={selectedLanguageId}
+                    setSelectedLanguageId={setSelectedLanguageId}
                     deleteQuestion={deleteQuestion}
                     activeQuestionId={activeQuestionId}
                     setActiveQuestionId={setActiveQuestionId}
                     lastQuestion={questionIdx === localSurvey.questions.length - 1}
+                    surveyLanguages={surveyLanguages}
                     isInvalid={invalidQuestions ? invalidQuestions.includes(question.id) : false}
                   />
                 ))}
@@ -250,6 +319,11 @@ export default function QuestionsView({
           setLocalSurvey={setLocalSurvey}
           setActiveQuestionId={setActiveQuestionId}
           activeQuestionId={activeQuestionId}
+          isInvalid={invalidQuestions ? invalidQuestions.includes("end") : false}
+          surveyLanguages={surveyLanguages}
+          setSelectedLanguageId={setSelectedLanguageId}
+          selectedLanguageId={selectedLanguageId}
+          defaultLanguageId={defaultLanguageId}
         />
 
         {localSurvey.type === "link" ? (

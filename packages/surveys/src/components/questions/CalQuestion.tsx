@@ -7,6 +7,7 @@ import Subheader from "@/components/general/Subheader";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 import { useCallback, useState } from "preact/hooks";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TResponseData } from "@formbricks/types/responses";
 import { TResponseTtc } from "@formbricks/types/responses";
 import { TSurveyCalQuestion } from "@formbricks/types/surveys";
@@ -19,6 +20,7 @@ interface CalQuestionProps {
   onBack: () => void;
   isFirstQuestion: boolean;
   isLastQuestion: boolean;
+  languageId: string;
   ttc: TResponseTtc;
   setTtc: (ttc: TResponseTtc) => void;
 }
@@ -31,6 +33,7 @@ export default function CalQuestion({
   onBack,
   isFirstQuestion,
   isLastQuestion,
+  languageId,
   ttc,
   setTtc,
 }: CalQuestionProps) {
@@ -63,10 +66,15 @@ export default function CalQuestion({
       }}
       className="w-full">
       {question.imageUrl && <QuestionImage imgUrl={question.imageUrl} />}
-      <Headline headline={question.headline} questionId={question.id} required={question.required} />
-
-      <Subheader subheader={question.subheader} questionId={question.id} />
-
+      <Headline
+        headline={getLocalizedValue(question.headline, languageId)}
+        questionId={question.id}
+        required={question.required}
+      />
+      <Subheader
+        subheader={question.subheader ? getLocalizedValue(question.subheader, languageId) : ""}
+        questionId={question.id}
+      />
       <>
         {errorMessage && <span className="text-red-500">{errorMessage}</span>}
         <CalEmbed key={question.id} question={question} onSuccessfulBooking={onSuccessfulBooking} />
@@ -75,7 +83,7 @@ export default function CalQuestion({
       <div className="mt-4 flex w-full justify-between">
         {!isFirstQuestion && (
           <BackButton
-            backButtonLabel={question.backButtonLabel}
+            backButtonLabel={getLocalizedValue(question.backButtonLabel, languageId)}
             onClick={() => {
               onBack();
             }}
@@ -84,7 +92,7 @@ export default function CalQuestion({
         <div></div>
         {!question.required && (
           <SubmitButton
-            buttonLabel={question.buttonLabel}
+            buttonLabel={getLocalizedValue(question.buttonLabel, languageId)}
             isLastQuestion={isLastQuestion}
             onClick={() => {}}
           />

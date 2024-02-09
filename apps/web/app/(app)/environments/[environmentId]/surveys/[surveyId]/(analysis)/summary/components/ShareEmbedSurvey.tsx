@@ -1,14 +1,22 @@
 "use client";
 
 import { generateSingleUseIdAction } from "@/app/(app)/environments/[environmentId]/surveys/[surveyId]/(analysis)/summary/actions";
-import { ArrowLeftIcon, CodeBracketIcon, EnvelopeIcon, LinkIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowLeftIcon,
+  CodeBracketIcon,
+  EnvelopeIcon,
+  LanguageIcon,
+  LinkIcon,
+} from "@heroicons/react/24/outline";
 import { DocumentDuplicateIcon } from "@heroicons/react/24/solid";
 import { BellRing, BlocksIcon, Code2Icon, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
+import { getLanguageLabel } from "@formbricks/ee/multiLanguage/lib/isoLanguages";
 import { cn } from "@formbricks/lib/cn";
+import { getDefaultLanguage, getSurveyLanguages } from "@formbricks/lib/i18n/utils";
 import { TProduct } from "@formbricks/types/product";
 import { TSurvey } from "@formbricks/types/surveys";
 import { TUser } from "@formbricks/types/user";
@@ -27,9 +35,17 @@ interface ShareEmbedSurveyProps {
   product: TProduct;
   user: TUser;
 }
-export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, user }: ShareEmbedSurveyProps) {
+export default function ShareEmbedSurvey({
+  survey,
+  open,
+  setOpen,
+  webAppUrl,
+  product,
+  user,
+}: ShareEmbedSurveyProps) {
   const environmentId = survey.environmentId;
   const isSingleUseLinkSurvey = survey.singleUse?.enabled ?? false;
+  const defaultLanguageId = getDefaultLanguage(product.languages).id;
   const { email } = user;
 
   const tabs = [
@@ -42,6 +58,9 @@ export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, use
   const [showInitialPage, setShowInitialPage] = useState(true);
   const linkTextRef = useRef(null);
   const [surveyUrl, setSurveyUrl] = useState("");
+  const surveyLanguages = getSurveyLanguages(product, survey);
+  const [language, setLanguage] = useState<string>(defaultLanguageId);
+  const [showLanguageSelect, setShowLanguageSelect] = useState(false);
 
   const getUrl = useCallback(async () => {
     let url = webAppUrl + "/s/" + survey.id;
@@ -49,12 +68,19 @@ export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, use
       const singleUseId = await generateSingleUseIdAction(survey.id, survey.singleUse.isEncrypted);
       url += "?suId=" + singleUseId;
     }
+    if (language !== defaultLanguageId) {
+      if (survey.singleUse?.enabled) {
+        url += "&lang=" + language;
+      } else {
+        url += "?lang=" + language;
+      }
+    }
     setSurveyUrl(url);
-  }, [survey, webAppUrl]);
+  }, [survey, webAppUrl, language, defaultLanguageId]);
 
   useEffect(() => {
     getUrl();
-  }, [survey, webAppUrl, getUrl]);
+  }, [survey, webAppUrl, getUrl, language]);
 
   const handleTextSelection = () => {
     if (linkTextRef.current) {
@@ -91,7 +117,8 @@ export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, use
           <div className="h-full max-w-full overflow-hidden">
             <div className="flex h-[200px] w-full flex-col items-center justify-center space-y-6 p-8 text-center lg:h-2/5">
               <p className="pt-2 text-xl font-semibold text-slate-800">Your survey is public 🎉</p>
-              <div className="flex max-w-full flex-col items-center justify-center space-x-2 lg:flex-row">
+              <div
+                className={`flex max-w-full flex-col items-center justify-center space-x-2  ${survey.singleUse?.enabled ? "flex-col" : "lg:flex-row"}`}>
                 <div
                   ref={linkTextRef}
                   className="mt-2 max-w-[70%] overflow-hidden rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-slate-800"
@@ -100,6 +127,34 @@ export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, use
                   {surveyUrl}
                 </div>
                 <div className="mt-2 flex items-center justify-center space-x-2">
+                  {surveyLanguages.length > 1 && (
+                    <div className="relative">
+                      {showLanguageSelect && (
+                        <div className="absolute left-0 right-0 top-12 rounded-lg border bg-slate-900 p-1 text-sm text-white">
+                          {surveyLanguages.map((language) => {
+                            return (
+                              <div
+                                className="rounded-md px-1 py-2 hover:cursor-pointer hover:bg-slate-700"
+                                onClick={() => {
+                                  setLanguage(language.id);
+                                  setShowLanguageSelect(false);
+                                }}>
+                                {getLanguageLabel(language.id)}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <Button
+                        variant="secondary"
+                        className=""
+                        title="Select Language"
+                        aria-label="Select Language"
+                        onClick={() => setShowLanguageSelect(!showLanguageSelect)}>
+                        <LanguageIcon className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     variant="darkCTA"
                     className="inline"
@@ -112,6 +167,7 @@ export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, use
                     EndIcon={DocumentDuplicateIcon}>
                     Copy Link
                   </Button>
+
                   {survey.singleUse?.enabled && (
                     <Button
                       variant="darkCTA"
@@ -194,6 +250,8 @@ export default function ShareEmbedSurvey({ survey, open, setOpen, webAppUrl, use
                       webAppUrl={webAppUrl}
                       generateNewSingleUseLink={generateNewSingleUseLink}
                       isSingleUseLinkSurvey={isSingleUseLinkSurvey}
+                      surveyLanguages={surveyLanguages}
+                      setLanguage={setLanguage}
                     />
                   ) : null}
                 </div>

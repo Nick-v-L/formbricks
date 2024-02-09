@@ -4,14 +4,15 @@ import { PlusIcon, TrashIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
+import LocalizedInput from "@formbricks/ee/multiLanguage/components/LocalizedInput";
+import { createI18nString } from "@formbricks/lib/i18n/utils";
 import { useGetBillingInfo } from "@formbricks/lib/team/hooks/useGetBillingInfo";
 import { TAllowedFileExtension, ZAllowedFileExtension } from "@formbricks/types/common";
-import { TProduct } from "@formbricks/types/product";
+import { TLanguage, TProduct } from "@formbricks/types/product";
 import { TSurvey, TSurveyFileUploadQuestion } from "@formbricks/types/surveys";
 import { AdvancedOptionToggle } from "@formbricks/ui/AdvancedOptionToggle";
 import { Button } from "@formbricks/ui/Button";
 import { Input } from "@formbricks/ui/Input";
-import QuestionFormInput from "@formbricks/ui/QuestionFormInput";
 
 interface FileUploadFormProps {
   localSurvey: TSurvey;
@@ -20,7 +21,11 @@ interface FileUploadFormProps {
   questionIdx: number;
   updateQuestion: (questionIdx: number, updatedAttributes: any) => void;
   lastQuestion: boolean;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
   isInvalid: boolean;
+  defaultLanguageId: string;
 }
 
 export default function FileUploadQuestionForm({
@@ -30,6 +35,10 @@ export default function FileUploadQuestionForm({
   updateQuestion,
   isInvalid,
   product,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
+  defaultLanguageId,
 }: FileUploadFormProps): JSX.Element {
   const [showSubheader, setShowSubheader] = useState(!!question.subheader);
   const [extension, setExtension] = useState("");
@@ -38,6 +47,7 @@ export default function FileUploadQuestionForm({
     error: billingInfoError,
     isLoading: billingInfoLoading,
   } = useGetBillingInfo(product?.teamId ?? "");
+  const surveyLanguageSymbols = Object.keys(surveyLanguages);
 
   const handleInputChange = (event) => {
     setExtension(event.target.value);
@@ -103,41 +113,48 @@ export default function FileUploadQuestionForm({
     return 10;
   }, [billingInfo, billingInfoError, billingInfoLoading]);
 
-  const environmentId = localSurvey.environmentId;
-
   return (
     <form>
-      <QuestionFormInput
+      <LocalizedInput
+        id="headline"
+        name="headline"
+        value={question.headline}
         localSurvey={localSurvey}
-        environmentId={environmentId}
-        isInvalid={isInvalid}
-        questionId={question.id}
         questionIdx={questionIdx}
+        surveyLanguages={surveyLanguages}
+        isInvalid={isInvalid}
         updateQuestion={updateQuestion}
-        type="headline"
+        selectedLanguageId={selectedLanguageId}
+        setSelectedLanguageId={setSelectedLanguageId}
+        defaultLanguageId={defaultLanguageId}
       />
       <div>
         {showSubheader && (
-          <>
-            <div className="flex w-full items-center">
-              <QuestionFormInput
+          <div className="inline-flex w-full items-center">
+            <div className="w-full">
+              <LocalizedInput
+                id="subheader"
+                name="subheader"
+                value={question.subheader}
                 localSurvey={localSurvey}
-                environmentId={environmentId}
-                isInvalid={isInvalid}
-                questionId={question.id}
                 questionIdx={questionIdx}
+                surveyLanguages={surveyLanguages}
+                isInvalid={isInvalid}
                 updateQuestion={updateQuestion}
-                type="subheader"
-              />
-              <TrashIcon
-                className="ml-2 mt-10 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-500"
-                onClick={() => {
-                  setShowSubheader(false);
-                  updateQuestion(questionIdx, { subheader: "" });
-                }}
+                selectedLanguageId={selectedLanguageId}
+                setSelectedLanguageId={setSelectedLanguageId}
+                defaultLanguageId={defaultLanguageId}
               />
             </div>
-          </>
+
+            <TrashIcon
+              className="ml-2 mt-10 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-500"
+              onClick={() => {
+                setShowSubheader(false);
+                updateQuestion(questionIdx, { subheader: undefined });
+              }}
+            />
+          </div>
         )}
         {!showSubheader && (
           <Button
@@ -145,7 +162,13 @@ export default function FileUploadQuestionForm({
             className="mt-3"
             variant="minimal"
             type="button"
-            onClick={() => setShowSubheader(true)}>
+            onClick={() => {
+              updateQuestion(questionIdx, {
+                subheader: createI18nString("", surveyLanguageSymbols, defaultLanguageId),
+              });
+              setShowSubheader(true);
+            }}>
+            {" "}
             <PlusIcon className="mr-1 h-4 w-4" />
             Add Description
           </Button>

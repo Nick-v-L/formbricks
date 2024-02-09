@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { BsArrowDown, BsArrowReturnRight } from "react-icons/bs";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import {
   TSurvey,
   TSurveyLogic,
@@ -27,6 +28,7 @@ interface LogicEditorProps {
   questionIdx: number;
   question: TSurveyQuestion;
   updateQuestion: (questionIdx: number, updatedAttributes: any) => void;
+  defaultLanguageId: string;
 }
 
 type LogicConditions = {
@@ -43,17 +45,18 @@ export default function LogicEditor({
   question,
   questionIdx,
   updateQuestion,
+  defaultLanguageId,
 }: LogicEditorProps): JSX.Element {
   const questionValues = useMemo(() => {
     if ("choices" in question) {
-      return question.choices.map((choice) => choice.label);
+      return question.choices.map((choice) => getLocalizedValue(choice.label, defaultLanguageId));
     } else if ("range" in question) {
       return Array.from({ length: question.range ? question.range : 0 }, (_, i) => (i + 1).toString());
     } else if (question.type === TSurveyQuestionType.NPS) {
       return Array.from({ length: 11 }, (_, i) => (i + 0).toString());
     }
     return [];
-  }, [question]);
+  }, [question, defaultLanguageId]);
 
   const conditions = {
     openText: ["submitted", "skipped"],
@@ -233,7 +236,7 @@ export default function LogicEditor({
   };
 
   const deleteLogic = (logicIdx: number) => {
-    const updatedLogic = !question.logic ? [] : JSON.parse(JSON.stringify(question.logic));
+    const updatedLogic = !question.logic ? [] : structuredClone(question.logic);
     updatedLogic.splice(logicIdx, 1);
     updateQuestion(questionIdx, { logic: updatedLogic });
   };
@@ -343,9 +346,14 @@ export default function LogicEditor({
                   {localSurvey.questions.map(
                     (question, idx) =>
                       idx !== questionIdx && (
-                        <SelectItem key={question.id} value={question.id} title={question.headline}>
-                          <div className="max-w-[6rem]">
-                            <p className="truncate text-left">{question.headline}</p>
+                        <SelectItem
+                          key={question.id}
+                          value={question.id}
+                          title={getLocalizedValue(question.headline, defaultLanguageId)}>
+                          <div className="w-40">
+                            <p className="truncate text-left">
+                              {getLocalizedValue(question.headline, defaultLanguageId)}
+                            </p>
                           </div>
                         </SelectItem>
                       )

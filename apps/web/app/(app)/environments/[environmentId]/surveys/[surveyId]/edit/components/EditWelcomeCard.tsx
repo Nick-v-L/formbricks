@@ -4,12 +4,12 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { LocalizedEditor } from "@formbricks/ee/multiLanguage/components/LocalizedEditor";
+import LocalizedInput from "@formbricks/ee/multiLanguage/components/LocalizedInput";
 import { cn } from "@formbricks/lib/cn";
-import { md } from "@formbricks/lib/markdownIt";
+import { TLanguage } from "@formbricks/types/product";
 import { TSurvey } from "@formbricks/types/surveys";
-import { Editor } from "@formbricks/ui/Editor";
 import FileInput from "@formbricks/ui/FileInput";
-import { Input } from "@formbricks/ui/Input";
 import { Label } from "@formbricks/ui/Label";
 import { Switch } from "@formbricks/ui/Switch";
 
@@ -18,6 +18,11 @@ interface EditWelcomeCardProps {
   setLocalSurvey: (survey: TSurvey) => void;
   setActiveQuestionId: (id: string | null) => void;
   activeQuestionId: string | null;
+  isInvalid: boolean;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
+  defaultLanguageId: string;
 }
 
 export default function EditWelcomeCard({
@@ -25,6 +30,11 @@ export default function EditWelcomeCard({
   setLocalSurvey,
   setActiveQuestionId,
   activeQuestionId,
+  isInvalid,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
+  defaultLanguageId,
 }: EditWelcomeCardProps) {
   const [firstRender, setFirstRender] = useState(true);
   const path = usePathname();
@@ -50,7 +60,7 @@ export default function EditWelcomeCard({
   };
   useEffect(() => {
     setFirstRender(true);
-  }, [activeQuestionId]);
+  }, [localSurvey.thankYouCard]);
 
   return (
     <div
@@ -60,8 +70,9 @@ export default function EditWelcomeCard({
       )}>
       <div
         className={cn(
-          open ? "bg-slate-50" : "bg-white group-hover:bg-slate-50",
-          "flex w-10 items-center justify-center rounded-l-lg border-b border-l border-t group-aria-expanded:rounded-bl-none"
+          open ? "bg-slate-50" : "",
+          "flex w-10 items-center justify-center rounded-l-lg border-b border-l border-t group-aria-expanded:rounded-bl-none",
+          isInvalid ? "bg-red-400" : "bg-white group-hover:bg-slate-50"
         )}>
         <p>✋</p>
       </div>
@@ -115,34 +126,37 @@ export default function EditWelcomeCard({
               />
             </div>
             <div className="mt-3">
-              <Label htmlFor="headline">Headline</Label>
-              <div className="mt-2">
-                <Input
-                  id="headline"
-                  name="headline"
-                  defaultValue={localSurvey?.welcomeCard?.headline}
-                  onChange={(e) => {
-                    updateSurvey({ headline: e.target.value });
-                  }}
-                />
-              </div>
+              <LocalizedInput
+                id="headline"
+                name="headline"
+                value={localSurvey.welcomeCard.headline}
+                label="Headline"
+                localSurvey={localSurvey}
+                questionIdx={-1}
+                surveyLanguages={surveyLanguages}
+                isInvalid={isInvalid}
+                updateSurvey={updateSurvey}
+                selectedLanguageId={selectedLanguageId}
+                setSelectedLanguageId={setSelectedLanguageId}
+                defaultLanguageId={defaultLanguageId}
+              />
             </div>
             <div className="mt-3">
               <Label htmlFor="subheader">Welcome Message</Label>
               <div className="mt-2">
-                <Editor
-                  getText={() =>
-                    md.render(
-                      localSurvey?.welcomeCard?.html || "Thanks for providing your feedback - let's go!"
-                    )
-                  }
-                  setText={(value: string) => {
-                    updateSurvey({ html: value });
-                  }}
-                  excludedToolbarItems={["blockType"]}
-                  disableLists
+                <LocalizedEditor
+                  id="html"
+                  value={localSurvey.welcomeCard.html}
+                  localSurvey={localSurvey}
+                  surveyLanguages={surveyLanguages}
+                  isInvalid={isInvalid}
+                  updateQuestion={updateSurvey}
+                  selectedLanguageId={selectedLanguageId}
+                  setSelectedLanguageId={setSelectedLanguageId}
                   firstRender={firstRender}
                   setFirstRender={setFirstRender}
+                  questionIdx={-1}
+                  defaultLanguageId={defaultLanguageId}
                 />
               </div>
             </div>
@@ -150,15 +164,21 @@ export default function EditWelcomeCard({
             <div className="mt-3 flex justify-between gap-8">
               <div className="flex w-full space-x-2">
                 <div className="w-full">
-                  <Label htmlFor="buttonLabel">Button Label</Label>
-                  <div className="mt-2">
-                    <Input
-                      id="buttonLabel"
-                      name="buttonLabel"
-                      defaultValue={localSurvey?.welcomeCard?.buttonLabel || "Next"}
-                      onChange={(e) => updateSurvey({ buttonLabel: e.target.value })}
-                    />
-                  </div>
+                  <LocalizedInput
+                    id="buttonLabel"
+                    name="buttonLabel"
+                    value={localSurvey.welcomeCard.buttonLabel}
+                    localSurvey={localSurvey}
+                    questionIdx={-1}
+                    maxLength={48}
+                    placeholder={"Next"}
+                    surveyLanguages={surveyLanguages}
+                    isInvalid={isInvalid}
+                    updateSurvey={updateSurvey}
+                    selectedLanguageId={selectedLanguageId}
+                    setSelectedLanguageId={setSelectedLanguageId}
+                    defaultLanguageId={defaultLanguageId}
+                  />
                 </div>
               </div>
             </div>

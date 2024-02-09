@@ -6,6 +6,7 @@ import QuestionImage from "@/components/general/QuestionImage";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 import { useState } from "react";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TResponseData } from "@formbricks/types/responses";
 import { TResponseTtc } from "@formbricks/types/responses";
 import type { TSurveyCTAQuestion } from "@formbricks/types/surveys";
@@ -18,6 +19,7 @@ interface CTAQuestionProps {
   onBack: () => void;
   isFirstQuestion: boolean;
   isLastQuestion: boolean;
+  languageId: string;
   ttc: TResponseTtc;
   setTtc: (ttc: TResponseTtc) => void;
 }
@@ -29,6 +31,7 @@ export default function CTAQuestion({
   onBack,
   isFirstQuestion,
   isLastQuestion,
+  languageId,
   ttc,
   setTtc,
 }: CTAQuestionProps) {
@@ -39,13 +42,16 @@ export default function CTAQuestion({
   return (
     <div>
       {question.imageUrl && <QuestionImage imgUrl={question.imageUrl} />}
-      <Headline headline={question.headline} questionId={question.id} required={question.required} />
-      <HtmlBody htmlString={question.html} questionId={question.id} />
-
+      <Headline
+        headline={getLocalizedValue(question.headline, languageId)}
+        questionId={question.id}
+        required={question.required}
+      />
+      <HtmlBody htmlString={getLocalizedValue(question.html, languageId)} questionId={question.id} />
       <div className="mt-4 flex w-full justify-between">
         {!isFirstQuestion && (
           <BackButton
-            backButtonLabel={question.backButtonLabel}
+            backButtonLabel={getLocalizedValue(question.backButtonLabel, languageId)}
             onClick={() => {
               const updatedTtcObj = getUpdatedTtc(ttc, question.id, performance.now() - startTime);
               setTtc(updatedTtcObj);
@@ -66,11 +72,11 @@ export default function CTAQuestion({
                 onChange({ [question.id]: "dismissed" });
               }}
               className="text-heading focus:ring-focus mr-4 flex items-center rounded-md px-3 py-3 text-base font-medium leading-4 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2">
-              {question.dismissButtonLabel || "Skip"}
+              {getLocalizedValue(question.dismissButtonLabel, languageId) || "Skip"}
             </button>
           )}
           <SubmitButton
-            buttonLabel={question.buttonLabel}
+            buttonLabel={getLocalizedValue(question.buttonLabel, languageId)}
             isLastQuestion={isLastQuestion}
             focus={true}
             onClick={() => {

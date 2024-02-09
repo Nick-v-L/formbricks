@@ -9,6 +9,7 @@ import {
   DocumentMagnifyingGlassIcon,
   HashtagIcon,
   KeyIcon,
+  LanguageIcon,
   LinkIcon,
   PaintBrushIcon,
   UserCircleIcon,
@@ -33,12 +34,14 @@ export default function SettingsNavbar({
   team,
   product,
   membershipRole,
+  isEnterpriseEdition,
 }: {
   environmentId: string;
   isFormbricksCloud: boolean;
   team: TTeam;
   product: TProduct;
   membershipRole?: TMembershipRole;
+  isEnterpriseEdition: boolean;
 }) {
   const pathname = usePathname();
   const [mobileNavMenuOpen, setMobileNavMenuOpen] = useState(false);
@@ -98,6 +101,13 @@ export default function SettingsNavbar({
             icon: PaintBrushIcon,
             current: pathname?.includes("/lookandfeel"),
             hidden: isViewer,
+          },
+          {
+            name: "Survey Languages",
+            href: `/environments/${environmentId}/settings/language`,
+            icon: LanguageIcon,
+            current: pathname?.includes("/language"),
+            hidden: !isEnterpriseEdition,
           },
           {
             name: "API Keys",
@@ -198,7 +208,7 @@ export default function SettingsNavbar({
         hidden: false,
       },
     ],
-    [environmentId, isFormbricksCloud, pathname, isPricingDisabled, isViewer]
+    [environmentId, isFormbricksCloud, pathname, isPricingDisabled, isViewer, isEnterpriseEdition]
   );
 
   if (!navigation) return null;

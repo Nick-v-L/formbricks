@@ -11,6 +11,7 @@ import { getFilterResponses } from "@/app/lib/surveys/surveys";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { getDefaultLanguage } from "@formbricks/lib/i18n/utils";
 import { checkForRecallInHeadline } from "@formbricks/lib/utils/recall";
 import { TEnvironment } from "@formbricks/types/environment";
 import { TMembershipRole } from "@formbricks/types/memberships";
@@ -53,9 +54,12 @@ const SummaryPage = ({
   const { selectedFilter, dateRange, resetState } = useResponseFilter();
   const [showDropOffs, setShowDropOffs] = useState<boolean>(false);
   const searchParams = useSearchParams();
+  const defaultLanguageId = getDefaultLanguage(product.languages).id;
+
   survey = useMemo(() => {
-    return checkForRecallInHeadline(survey);
-  }, [survey]);
+    return checkForRecallInHeadline(survey, defaultLanguageId);
+  }, [survey, product.languages, defaultLanguageId]);
+
   useEffect(() => {
     if (!searchParams?.get("referer")) {
       resetState();
@@ -84,6 +88,7 @@ const SummaryPage = ({
           responses={filterResponses}
           survey={survey}
           totalResponses={responses}
+          defaultLanguageId={defaultLanguageId}
         />
         <ResultsShareButton survey={survey} webAppUrl={webAppUrl} product={product} user={user} />
       </div>
@@ -95,12 +100,20 @@ const SummaryPage = ({
         showDropOffs={showDropOffs}
         setShowDropOffs={setShowDropOffs}
       />
-      {showDropOffs && <SummaryDropOffs survey={survey} responses={responses} displayCount={displayCount} />}
+      {showDropOffs && (
+        <SummaryDropOffs
+          survey={survey}
+          responses={responses}
+          displayCount={displayCount}
+          defaultLanguageId={defaultLanguageId}
+        />
+      )}
       <SummaryList
         responses={filterResponses}
         survey={survey}
         environment={environment}
         responsesPerPage={responsesPerPage}
+        languages={product.languages}
       />
     </ContentWrapper>
   );

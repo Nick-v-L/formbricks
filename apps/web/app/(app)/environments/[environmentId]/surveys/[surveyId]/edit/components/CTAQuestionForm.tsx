@@ -1,14 +1,13 @@
 "use client";
 
-import { BackButtonInput } from "@/app/(app)/environments/[environmentId]/surveys/[surveyId]/edit/components/QuestionCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { md } from "@formbricks/lib/markdownIt";
+import { LocalizedEditor } from "@formbricks/ee/multiLanguage/components/LocalizedEditor";
+import LocalizedInput from "@formbricks/ee/multiLanguage/components/LocalizedInput";
+import { TLanguage } from "@formbricks/types/product";
 import { TSurvey, TSurveyCTAQuestion } from "@formbricks/types/surveys";
-import { Editor } from "@formbricks/ui/Editor";
 import { Input } from "@formbricks/ui/Input";
 import { Label } from "@formbricks/ui/Label";
-import QuestionFormInput from "@formbricks/ui/QuestionFormInput";
 import { RadioGroup, RadioGroupItem } from "@formbricks/ui/RadioGroup";
 
 interface CTAQuestionFormProps {
@@ -17,7 +16,11 @@ interface CTAQuestionFormProps {
   questionIdx: number;
   updateQuestion: (questionIdx: number, updatedAttributes: any) => void;
   lastQuestion: boolean;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
   isInvalid: boolean;
+  defaultLanguageId: string;
 }
 
 export default function CTAQuestionForm({
@@ -27,38 +30,49 @@ export default function CTAQuestionForm({
   lastQuestion,
   isInvalid,
   localSurvey,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
+  defaultLanguageId,
 }: CTAQuestionFormProps): JSX.Element {
   const [firstRender, setFirstRender] = useState(true);
-  const environmentId = localSurvey.environmentId;
+
+  useEffect(() => {
+    setFirstRender(true);
+  }, [selectedLanguageId]);
 
   return (
     <form>
-      <QuestionFormInput
+      <LocalizedInput
+        id="headline"
+        name="headline"
+        value={question.headline}
         localSurvey={localSurvey}
-        environmentId={environmentId}
-        isInvalid={isInvalid}
-        questionId={question.id}
         questionIdx={questionIdx}
+        surveyLanguages={surveyLanguages}
+        isInvalid={isInvalid}
         updateQuestion={updateQuestion}
-        type="headline"
+        selectedLanguageId={selectedLanguageId}
+        setSelectedLanguageId={setSelectedLanguageId}
+        defaultLanguageId={defaultLanguageId}
       />
 
       <div className="mt-3">
         <Label htmlFor="subheader">Description</Label>
         <div className="mt-2">
-          <Editor
-            getText={() =>
-              md.render(
-                question.html || "We would love to talk to you and learn more about how you use our product."
-              )
-            }
-            setText={(value: string) => {
-              updateQuestion(questionIdx, { html: value });
-            }}
-            excludedToolbarItems={["blockType"]}
-            disableLists
+          <LocalizedEditor
+            id="subheader"
+            value={question.html}
+            localSurvey={localSurvey}
+            surveyLanguages={surveyLanguages}
+            isInvalid={isInvalid}
+            updateQuestion={updateQuestion}
+            selectedLanguageId={selectedLanguageId}
+            setSelectedLanguageId={setSelectedLanguageId}
             firstRender={firstRender}
             setFirstRender={setFirstRender}
+            questionIdx={questionIdx}
+            defaultLanguageId={defaultLanguageId}
           />
         </div>
       </div>
@@ -82,24 +96,39 @@ export default function CTAQuestionForm({
         </div>
       </RadioGroup>
 
-      <div className="mt-3 flex justify-between gap-8">
+      <div className="mt-2 flex justify-between gap-8">
         <div className="flex w-full space-x-2">
-          <div className="w-full">
-            <Label htmlFor="buttonLabel">Button Label</Label>
-            <div className="mt-2">
-              <Input
-                id="buttonLabel"
-                name="buttonLabel"
-                value={question.buttonLabel}
-                placeholder={lastQuestion ? "Finish" : "Next"}
-                onChange={(e) => updateQuestion(questionIdx, { buttonLabel: e.target.value })}
-              />
-            </div>
-          </div>
+          <LocalizedInput
+            id="buttonLabel"
+            name="buttonLabel"
+            value={question.buttonLabel}
+            localSurvey={localSurvey}
+            questionIdx={questionIdx}
+            maxLength={48}
+            placeholder={lastQuestion ? "Finish" : "Next"}
+            surveyLanguages={surveyLanguages}
+            isInvalid={isInvalid}
+            updateQuestion={updateQuestion}
+            selectedLanguageId={selectedLanguageId}
+            setSelectedLanguageId={setSelectedLanguageId}
+            defaultLanguageId={defaultLanguageId}
+          />
+
           {questionIdx !== 0 && (
-            <BackButtonInput
+            <LocalizedInput
+              id="backButtonLabel"
+              name="backButtonLabel"
               value={question.backButtonLabel}
-              onChange={(e) => updateQuestion(questionIdx, { backButtonLabel: e.target.value })}
+              localSurvey={localSurvey}
+              questionIdx={questionIdx}
+              maxLength={48}
+              placeholder={"Back"}
+              surveyLanguages={surveyLanguages}
+              isInvalid={isInvalid}
+              updateQuestion={updateQuestion}
+              selectedLanguageId={selectedLanguageId}
+              setSelectedLanguageId={setSelectedLanguageId}
+              defaultLanguageId={defaultLanguageId}
             />
           )}
         </div>
@@ -124,12 +153,19 @@ export default function CTAQuestionForm({
         <div className="mt-3 flex-1">
           <Label htmlFor="buttonLabel">Skip Button Label</Label>
           <div className="mt-2">
-            <Input
+            <LocalizedInput
               id="dismissButtonLabel"
               name="dismissButtonLabel"
               value={question.dismissButtonLabel}
-              placeholder="Skip"
-              onChange={(e) => updateQuestion(questionIdx, { dismissButtonLabel: e.target.value })}
+              localSurvey={localSurvey}
+              questionIdx={questionIdx}
+              placeholder={"skip"}
+              surveyLanguages={surveyLanguages}
+              isInvalid={isInvalid}
+              updateQuestion={updateQuestion}
+              selectedLanguageId={selectedLanguageId}
+              setSelectedLanguageId={setSelectedLanguageId}
+              defaultLanguageId={defaultLanguageId}
             />
           </div>
         </div>

@@ -2,6 +2,7 @@ import { evaluateCondition } from "@/app/(app)/environments/[environmentId]/surv
 import { TimerIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TResponse } from "@formbricks/types/responses";
 import { TSurvey } from "@formbricks/types/surveys";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@formbricks/ui/Tooltip";
@@ -10,9 +11,15 @@ interface SummaryDropOffsProps {
   survey: TSurvey;
   responses: TResponse[];
   displayCount: number;
+  defaultLanguageId: string;
 }
 
-export default function SummaryDropOffs({ responses, survey, displayCount }: SummaryDropOffsProps) {
+export default function SummaryDropOffs({
+  responses,
+  survey,
+  displayCount,
+  defaultLanguageId,
+}: SummaryDropOffsProps) {
   const initialAvgTtc = useMemo(
     () =>
       survey.questions.reduce((acc, question) => {
@@ -183,7 +190,9 @@ export default function SummaryDropOffs({ responses, survey, displayCount }: Sum
           <div
             key={question.id}
             className="grid grid-cols-6 items-center border-b border-slate-100 py-2 text-sm text-slate-800 md:text-base">
-            <div className="col-span-3 pl-4 md:pl-6">{question.headline}</div>
+            <div className="col-span-3 pl-4 md:pl-6">
+              {getLocalizedValue(question.headline, defaultLanguageId)}
+            </div>
             <div className="whitespace-pre-wrap text-center font-semibold">
               {avgTtc[question.id] !== undefined ? (avgTtc[question.id] / 1000).toFixed(2) + "s" : "N/A"}
             </div>

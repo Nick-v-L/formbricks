@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 
 import { prisma } from "@formbricks/database";
+import { TLegacySurvey, ZLegacySurvey } from "@formbricks/types/LegacySurvey";
 import { TActionClass } from "@formbricks/types/actionClasses";
 import { ZOptionalNumber } from "@formbricks/types/common";
 import { ZId } from "@formbricks/types/environment";
@@ -16,6 +17,7 @@ import { getAttributeClasses } from "../attributeClass/service";
 import { ITEMS_PER_PAGE, SERVICES_REVALIDATION_INTERVAL } from "../constants";
 import { displayCache } from "../display/cache";
 import { getDisplaysByPersonId } from "../display/service";
+import { getDefaultLanguage, reverseTranslateSurvey } from "../i18n/utils";
 import { personCache } from "../person/cache";
 import { productCache } from "../product/cache";
 import { getProductByEnvironmentId } from "../product/service";
@@ -273,7 +275,26 @@ export const getSurveys = async (environmentId: string, page?: number): Promise<
   return surveys.map((survey) => formatDateFields(survey, ZSurvey));
 };
 
-export const updateSurvey = async (updatedSurvey: TSurvey): Promise<TSurvey> => {
+export const transformToLegacySurvey = async (
+  survey: TSurvey,
+  defaultLanguageId: string
+): Promise<TLegacySurvey> => {
+  const transformedSurvey = await unstable_cache(
+    async () => {
+      return reverseTranslateSurvey(survey, defaultLanguageId);
+    },
+    [`transformToLegacySurvey-${survey}-${defaultLanguageId}`],
+    {
+      tags: [surveyCache.tag.byId(survey.id)],
+      revalidate: SERVICES_REVALIDATION_INTERVAL,
+    }
+  )();
+  // since the unstable_cache function does not support deserialization of dates, we need to manually deserialize them
+  // https://github.com/vercel/next.js/issues/51613
+  return formatDateFields(transformedSurvey, ZLegacySurvey);
+};
+
+export async function updateSurvey(updatedSurvey: TSurvey): Promise<TSurvey> {
   validateInputs([updatedSurvey, ZSurvey]);
 
   const surveyId = updatedSurvey.id;
@@ -444,7 +465,7 @@ export const updateSurvey = async (updatedSurvey: TSurvey): Promise<TSurvey> => 
 
     throw error;
   }
-};
+}
 
 export async function deleteSurvey(surveyId: string) {
   validateInputs([surveyId, ZId]);
@@ -567,8 +588,8 @@ export const duplicateSurvey = async (environmentId: string, surveyId: string, u
       createdBy: undefined,
       name: `${existingSurvey.name} (copy)`,
       status: "draft",
-      questions: JSON.parse(JSON.stringify(existingSurvey.questions)),
-      thankYouCard: JSON.parse(JSON.stringify(existingSurvey.thankYouCard)),
+      questions: structuredClone(existingSurvey.questions),
+      thankYouCard: structuredClone(existingSurvey.thankYouCard),
       triggers: {
         create: existingSurvey.triggers.map((trigger) => ({
           actionClassId: getActionClassIdFromName(actionClasses, trigger),
@@ -588,18 +609,14 @@ export const duplicateSurvey = async (environmentId: string, surveyId: string, u
         },
       },
       surveyClosedMessage: existingSurvey.surveyClosedMessage
-        ? JSON.parse(JSON.stringify(existingSurvey.surveyClosedMessage))
+        ? structuredClone(existingSurvey.surveyClosedMessage)
         : Prisma.JsonNull,
-      singleUse: existingSurvey.singleUse
-        ? JSON.parse(JSON.stringify(existingSurvey.singleUse))
-        : Prisma.JsonNull,
+      singleUse: existingSurvey.singleUse ? structuredClone(existingSurvey.singleUse) : Prisma.JsonNull,
       productOverwrites: existingSurvey.productOverwrites
-        ? JSON.parse(JSON.stringify(existingSurvey.productOverwrites))
+        ? structuredClone(existingSurvey.productOverwrites)
         : Prisma.JsonNull,
-      styling: existingSurvey.styling ? JSON.parse(JSON.stringify(existingSurvey.styling)) : Prisma.JsonNull,
-      verifyEmail: existingSurvey.verifyEmail
-        ? JSON.parse(JSON.stringify(existingSurvey.verifyEmail))
-        : Prisma.JsonNull,
+      styling: existingSurvey.styling ? structuredClone(existingSurvey.styling) : Prisma.JsonNull,
+      verifyEmail: existingSurvey.verifyEmail ? structuredClone(existingSurvey.verifyEmail) : Prisma.JsonNull,
     },
   });
 
@@ -617,7 +634,11 @@ export const duplicateSurvey = async (environmentId: string, surveyId: string, u
   return newSurvey;
 };
 
-export const getSyncSurveys = async (environmentId: string, person: TPerson): Promise<TSurvey[]> => {
+export const getSyncSurveys = async (
+  environmentId: string,
+  person: TPerson,
+  version?: string
+): Promise<TSurvey[] | TLegacySurvey[]> => {
   validateInputs([environmentId, ZId]);
 
   const surveys = await unstable_cache(
@@ -700,6 +721,10 @@ export const getSyncSurveys = async (environmentId: string, person: TPerson): Pr
       if (!surveys) {
         throw new ResourceNotFoundError("Survey", environmentId);
       }
+      if (!version) {
+        const defaultLanguageId = getDefaultLanguage(product.languages).id;
+        return surveys.map((survey) => reverseTranslateSurvey(survey, defaultLanguageId));
+      }
       return surveys;
     },
     [`getSyncSurveys-${environmentId}-${person.userId}`],
@@ -713,7 +738,10 @@ export const getSyncSurveys = async (environmentId: string, person: TPerson): Pr
       revalidate: SERVICES_REVALIDATION_INTERVAL,
     }
   )();
-  return surveys.map((survey) => formatDateFields(survey, ZSurvey));
+  if (!version) {
+    return (surveys as TLegacySurvey[]).map((survey) => formatDateFields(survey, ZLegacySurvey));
+  }
+  return (surveys as TSurvey[]).map((survey) => formatDateFields(survey, ZSurvey));
 };
 
 export const getSurveyByResultShareKey = async (resultShareKey: string): Promise<string | null> => {

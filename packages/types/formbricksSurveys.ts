@@ -16,8 +16,10 @@ export interface SurveyBaseProps {
   autoFocus?: boolean;
   isRedirectDisabled?: boolean;
   prefillResponseData?: TResponseData;
+  languageId: string;
   onFileUpload: (file: File, config?: TUploadFileConfig) => Promise<string>;
   responseCount?: number;
+  defaultLanguageId: string;
 }
 
 export interface SurveyInlineProps extends SurveyBaseProps {

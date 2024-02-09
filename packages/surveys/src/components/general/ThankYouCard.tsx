@@ -5,14 +5,19 @@ import RedirectCountDown from "@/components/general/RedirectCountdown";
 import Subheader from "@/components/general/Subheader";
 import { useEffect } from "preact/hooks";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
+import { TI18nString } from "@formbricks/types/surveys";
+
 interface ThankYouCardProps {
-  headline?: string;
-  subheader?: string;
+  headline?: TI18nString;
+  subheader?: TI18nString;
   redirectUrl: string | null;
   isRedirectDisabled: boolean;
+  languageId: string;
   buttonLabel?: string;
   buttonLink?: string;
   imageUrl?: string;
+  replaceRecallInfo: (text: string) => string;
 }
 
 export default function ThankYouCard({
@@ -20,9 +25,11 @@ export default function ThankYouCard({
   subheader,
   redirectUrl,
   isRedirectDisabled,
+  languageId,
   buttonLabel,
   buttonLink,
   imageUrl,
+  replaceRecallInfo,
 }: ThankYouCardProps) {
   useEffect(() => {
     if (!buttonLink) return;
@@ -63,8 +70,15 @@ export default function ThankYouCard({
       )}
 
       <div>
-        <Headline alignTextCenter={true} headline={headline} questionId="thankYouCard" />
-        <Subheader subheader={subheader} questionId="thankYouCard" />
+        <Headline
+          alignTextCenter={true}
+          headline={replaceRecallInfo(getLocalizedValue(headline, languageId))}
+          questionId="thankYouCard"
+        />
+        <Subheader
+          subheader={replaceRecallInfo(getLocalizedValue(subheader, languageId))}
+          questionId="thankYouCard"
+        />
         <RedirectCountDown redirectUrl={redirectUrl} isRedirectDisabled={isRedirectDisabled} />
         {buttonLabel && (
           <div className="mt-6 flex w-full flex-col items-center justify-center space-y-4">

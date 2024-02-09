@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TIntegrationItem } from "@formbricks/types/integration";
 import {
   TIntegrationGoogleSheets,
@@ -28,6 +29,7 @@ interface AddWebhookModalProps {
   spreadsheets: TIntegrationItem[];
   googleSheetIntegration: TIntegrationGoogleSheets;
   selectedIntegration?: (TIntegrationGoogleSheetsConfigData & { index: number }) | null;
+  defaultLanguageId: string;
 }
 
 export default function AddIntegrationModal({
@@ -38,6 +40,7 @@ export default function AddIntegrationModal({
   spreadsheets,
   googleSheetIntegration,
   selectedIntegration,
+  defaultLanguageId,
 }: AddWebhookModalProps) {
   const { handleSubmit } = useForm();
 
@@ -286,7 +289,9 @@ export default function AddIntegrationModal({
                                 handleCheckboxChange(question.id);
                               }}
                             />
-                            <span className="ml-2">{question.headline}</span>
+                            <span className="ml-2">
+                              {getLocalizedValue(question.headline, defaultLanguageId)}
+                            </span>
                           </label>
                         </div>
                       ))}

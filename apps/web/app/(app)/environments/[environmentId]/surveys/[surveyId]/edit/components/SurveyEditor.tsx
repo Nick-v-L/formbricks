@@ -4,12 +4,21 @@ import { refetchProduct } from "@/app/(app)/environments/[environmentId]/surveys
 import Loading from "@/app/(app)/environments/[environmentId]/surveys/[surveyId]/edit/loading";
 import React from "react";
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 
+import LanguageSwitch from "@formbricks/ee/multiLanguage/components/LanguageSwitch";
+import {
+  containsTranslations,
+  extractLanguageIds,
+  getDefaultLanguage,
+  getSurveyLanguages,
+  translateSurvey,
+} from "@formbricks/lib/i18n/utils";
 import { TActionClass } from "@formbricks/types/actionClasses";
 import { TAttributeClass } from "@formbricks/types/attributeClasses";
 import { TEnvironment } from "@formbricks/types/environment";
 import { TMembershipRole } from "@formbricks/types/memberships";
-import { TProduct } from "@formbricks/types/product";
+import { TLanguage, TProduct } from "@formbricks/types/product";
 import { TSurvey } from "@formbricks/types/surveys";
 
 import PreviewSurvey from "../../../components/PreviewSurvey";
@@ -26,6 +35,7 @@ interface SurveyEditorProps {
   attributeClasses: TAttributeClass[];
   responseCount: number;
   membershipRole?: TMembershipRole;
+  isEnterpriseEdition: boolean;
   colours: string[];
 }
 
@@ -37,23 +47,42 @@ export default function SurveyEditor({
   attributeClasses,
   responseCount,
   membershipRole,
+  isEnterpriseEdition,
   colours,
 }: SurveyEditorProps): JSX.Element {
   const [activeView, setActiveView] = useState<"questions" | "settings">("questions");
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [localSurvey, setLocalSurvey] = useState<TSurvey | null>();
   const [invalidQuestions, setInvalidQuestions] = useState<String[] | null>(null);
+  const [i18n, setI18n] = useState(false);
+  const defaultLanguage = getDefaultLanguage(product.languages);
+  const defaultLanguageId = defaultLanguage.id;
+  const [surveyLanguages, setSurveyLanguages] = useState<TLanguage[]>([defaultLanguage]);
+  const [productLanguages, setProductLanguages] = useState<TLanguage[]>(product.languages ?? defaultLanguage);
+  const [selectedLanguageId, setSelectedLanguageId] = useState<string>(defaultLanguageId);
+  const surveyEditorRef = useRef(null);
+
   const [localProduct, setLocalProduct] = useState<TProduct>(product);
   useEffect(() => {
     if (survey) {
       if (localSurvey) return;
-      setLocalSurvey(JSON.parse(JSON.stringify(survey)));
-
+      setLocalSurvey(survey);
       if (survey.questions.length > 0) {
         setActiveQuestionId(survey.questions[0].id);
       }
+      if (containsTranslations(survey.questions[0].headline)) {
+        const surveyLanguages = getSurveyLanguages(product, survey);
+        setSurveyLanguages(surveyLanguages);
+      }
     }
-  }, [survey, localSurvey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [survey, localSurvey, product.languages]);
+
+  useEffect(() => {
+    if (!localSurvey) return;
+    setLocalSurvey(translateSurvey(localSurvey, surveyLanguages, defaultLanguageId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n, localSurvey?.id, localSurvey?.questions.length, selectedLanguageId, surveyLanguages]);
 
   useEffect(() => {
     const listener = () => {
@@ -62,6 +91,7 @@ export default function SurveyEditor({
           const latestProduct = await refetchProduct(localProduct.id);
           if (latestProduct) {
             setLocalProduct(latestProduct);
+            setProductLanguages(latestProduct.languages);
           }
         };
         fetchLatestProduct();
@@ -78,9 +108,14 @@ export default function SurveyEditor({
     if (localSurvey?.questions?.length && localSurvey.questions.length > 0) {
       setActiveQuestionId(localSurvey.questions[0].id);
     }
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSurvey?.type]);
+
+  useEffect(() => {
+    if (!extractLanguageIds(surveyLanguages).includes(selectedLanguageId)) {
+      setSelectedLanguageId(defaultLanguageId);
+    }
+  }, [surveyLanguages, selectedLanguageId, defaultLanguageId]);
 
   if (!localSurvey) {
     return <Loading />;
@@ -99,20 +134,39 @@ export default function SurveyEditor({
           setInvalidQuestions={setInvalidQuestions}
           product={localProduct}
           responseCount={responseCount}
+          surveyLanguages={surveyLanguages}
+          selectedLanguageId={selectedLanguageId}
         />
         <div className="relative z-0 flex flex-1 overflow-hidden">
-          <main className="relative z-0 flex-1 overflow-y-auto focus:outline-none">
+          <main className="relative z-0 flex-1 overflow-y-auto focus:outline-none" ref={surveyEditorRef}>
             <QuestionsAudienceTabs activeId={activeView} setActiveId={setActiveView} />
+
             {activeView === "questions" ? (
-              <QuestionsView
-                localSurvey={localSurvey}
-                setLocalSurvey={setLocalSurvey}
-                activeQuestionId={activeQuestionId}
-                setActiveQuestionId={setActiveQuestionId}
-                product={localProduct}
-                invalidQuestions={invalidQuestions}
-                setInvalidQuestions={setInvalidQuestions}
-              />
+              <>
+                <div className="mt-16">
+                  <LanguageSwitch
+                    productLanguages={productLanguages}
+                    surveyLanguages={surveyLanguages}
+                    setSurveyLanguages={setSurveyLanguages}
+                    i18n={surveyLanguages.length > 1}
+                    setI18n={setI18n}
+                    environmentId={environment.id}
+                    isEnterpriseEdition={isEnterpriseEdition}
+                  />
+                </div>
+                <QuestionsView
+                  localSurvey={localSurvey}
+                  setLocalSurvey={setLocalSurvey}
+                  activeQuestionId={activeQuestionId}
+                  setActiveQuestionId={setActiveQuestionId}
+                  product={product}
+                  invalidQuestions={invalidQuestions}
+                  setInvalidQuestions={setInvalidQuestions}
+                  selectedLanguageId={selectedLanguageId ? selectedLanguageId : defaultLanguageId}
+                  setSelectedLanguageId={setSelectedLanguageId}
+                  surveyLanguages={surveyLanguages}
+                />
+              </>
             ) : (
               <SettingsView
                 environment={environment}
@@ -134,7 +188,9 @@ export default function SurveyEditor({
               product={localProduct}
               environment={environment}
               previewType={localSurvey.type === "web" ? "modal" : "fullwidth"}
+              languageId={selectedLanguageId}
               onFileUpload={async (file) => file.name}
+              defaultLanguageId={defaultLanguageId}
             />
           </aside>
         </div>

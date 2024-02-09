@@ -1,5 +1,6 @@
 import { CheckCircleIcon, ChevronDoubleDownIcon, XCircleIcon } from "@heroicons/react/20/solid";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TSurveyQuestion } from "@formbricks/types/surveys";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../Tooltip";
@@ -9,6 +10,7 @@ interface QuestionSkipProps {
   status: string;
   questions: TSurveyQuestion[];
   isFirstQuestionAnswered?: boolean;
+  defaultLanguageId: string;
 }
 
 export default function QuestionSkip({
@@ -16,6 +18,7 @@ export default function QuestionSkip({
   status,
   questions,
   isFirstQuestionAnswered,
+  defaultLanguageId,
 }: QuestionSkipProps) {
   return (
     <div>
@@ -64,7 +67,10 @@ export default function QuestionSkip({
                   skippedQuestions.map((questionId) => {
                     return (
                       <p className="my-2" key={questionId}>
-                        {questions.find((question) => question.id === questionId)!.headline}
+                        {getLocalizedValue(
+                          questions.find((question) => question.id === questionId)!.headline,
+                          defaultLanguageId
+                        )}
                       </p>
                     );
                   })}
@@ -89,7 +95,10 @@ export default function QuestionSkip({
                   skippedQuestions.map((questionId) => {
                     return (
                       <p className="my-2" key={questionId}>
-                        {questions.find((question) => question.id === questionId)!.headline}
+                        {getLocalizedValue(
+                          questions.find((question) => question.id === questionId)!.headline,
+                          defaultLanguageId
+                        )}
                       </p>
                     );
                   })}
