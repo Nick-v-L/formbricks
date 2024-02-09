@@ -169,8 +169,8 @@ export default async function LinkSurveyPage({ params, searchParams }: LinkSurve
   console.log("Language symbold")
   console.log(languageSymbol)
   if (languageSymbol) {
-    print("Product languages")
-    print(product.languages)
+    console.log("Product languages")
+    console.log(product.languages)
     languageId = product.languages.find((l) => l.alias === languageSymbol || l.id === languageSymbol);
   }
   console.log("Language ID")
