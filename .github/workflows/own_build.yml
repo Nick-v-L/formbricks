@@ -77,7 +77,6 @@ jobs:
         uses: depot/build-push-action@v1
         with:
           project: tw0fqmsx3c
-          token: ${{ secrets.DEPOT_PROJECT_TOKEN }}
           context: .
           file: ./apps/web/Dockerfile
           platforms: linux/amd64,linux/arm64
