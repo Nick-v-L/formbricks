@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@formbricks/database";
 import { CRON_SECRET } from "@formbricks/lib/constants";
+import { getDefaultLanguage, getLocalizedValue } from "@formbricks/lib/i18n/utils";
+import { TLanguage } from "@formbricks/types/product";
 
 import { sendNoLiveSurveyNotificationEmail, sendWeeklySummaryNotificationEmail } from "./email";
 import { EnvironmentData, NotificationResponse, ProductData, Survey, SurveyResponse } from "./types";
@@ -39,7 +41,11 @@ export async function POST(): Promise<NextResponse> {
 
         if (teamMembersWithNotificationEnabled.length === 0) continue;
 
-        const notificationResponse = getNotificationResponse(product.environments[0], product.name);
+        const notificationResponse = getNotificationResponse(
+          product.environments[0],
+          product.name,
+          product.languages
+        );
 
         if (notificationResponse.insights.numLiveSurvey === 0) {
           for (const teamMember of teamMembersWithNotificationEnabled) {
@@ -83,6 +89,7 @@ const getProductsByTeamId = async (teamId: string): Promise<ProductData[]> => {
     select: {
       id: true,
       name: true,
+      languages: true,
       environments: {
         where: {
           type: "production",
@@ -163,7 +170,11 @@ const getProductsByTeamId = async (teamId: string): Promise<ProductData[]> => {
   });
 };
 
-const getNotificationResponse = (environment: EnvironmentData, productName: string): NotificationResponse => {
+const getNotificationResponse = (
+  environment: EnvironmentData,
+  productName: string,
+  languages: TLanguage[]
+): NotificationResponse => {
   const insights = {
     totalCompletedResponses: 0,
     totalDisplays: 0,
@@ -173,7 +184,7 @@ const getNotificationResponse = (environment: EnvironmentData, productName: stri
   };
 
   const surveys: Survey[] = [];
-
+  const defaultLanguageId = getDefaultLanguage(languages).id;
   // iterate through the surveys and calculate the overall insights
   for (const survey of environment.surveys) {
     const surveyData: Survey = {
@@ -196,7 +207,7 @@ const getNotificationResponse = (environment: EnvironmentData, productName: stri
         if (answer === null || answer === "" || answer?.length === 0) {
           continue;
         }
-        surveyResponse[headline] = answer;
+        surveyResponse[getLocalizedValue(headline, defaultLanguageId)] = answer;
       }
       surveyData.responses.push(surveyResponse);
     }

@@ -7,6 +7,7 @@ import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "preact/hooks";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TResponseData, TResponseTtc } from "@formbricks/types/responses";
 import type { TSurveyDateQuestion } from "@formbricks/types/surveys";
 
@@ -19,6 +20,7 @@ interface DateQuestionProps {
   isFirstQuestion: boolean;
   isLastQuestion: boolean;
   autoFocus?: boolean;
+  languageId: string;
   ttc: TResponseTtc;
   setTtc: (ttc: TResponseTtc) => void;
 }
@@ -31,6 +33,7 @@ export default function DateQuestion({
   isFirstQuestion,
   isLastQuestion,
   onChange,
+  languageId,
   setTtc,
   ttc,
 }: DateQuestionProps) {
@@ -120,8 +123,15 @@ export default function DateQuestion({
       }}
       className="w-full">
       {question.imageUrl && <QuestionImage imgUrl={question.imageUrl} />}
-      <Headline headline={question.headline} questionId={question.id} required={question.required} />
-      <Subheader subheader={question.subheader} questionId={question.id} />
+      <Headline
+        headline={getLocalizedValue(question.headline, languageId)}
+        questionId={question.id}
+        required={question.required}
+      />
+      <Subheader
+        subheader={question.subheader ? getLocalizedValue(question.subheader, languageId) : ""}
+        questionId={question.id}
+      />
 
       <div className={"text-red-600"}>
         <span>{errorMessage}</span>
@@ -141,7 +151,7 @@ export default function DateQuestion({
         <div>
           {!isFirstQuestion && (
             <BackButton
-              backButtonLabel={question.backButtonLabel}
+              backButtonLabel={getLocalizedValue(question.backButtonLabel, languageId)}
               onClick={() => {
                 const updatedTtcObj = getUpdatedTtc(ttc, question.id, performance.now() - startTime);
                 setTtc(updatedTtcObj);
@@ -151,7 +161,11 @@ export default function DateQuestion({
           )}
         </div>
 
-        <SubmitButton isLastQuestion={isLastQuestion} onClick={() => {}} buttonLabel={question.buttonLabel} />
+        <SubmitButton
+          isLastQuestion={isLastQuestion}
+          onClick={() => {}}
+          buttonLabel={getLocalizedValue(question.buttonLabel, languageId)}
+        />
       </div>
     </form>
   );

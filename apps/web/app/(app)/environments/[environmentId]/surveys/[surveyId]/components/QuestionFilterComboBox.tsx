@@ -1,9 +1,11 @@
 "use client";
 
+import { OptionsType } from "@/app/(app)/environments/[environmentId]/surveys/[surveyId]/components/QuestionsComboBox";
 import clsx from "clsx";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import * as React from "react";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import useClickOutside from "@formbricks/lib/useClickOutside";
 import { TSurveyQuestionType } from "@formbricks/types/surveys";
 import { Command, CommandEmpty, CommandGroup, CommandItem } from "@formbricks/ui/Command";
@@ -21,9 +23,10 @@ type QuestionFilterComboBoxProps = {
   filterComboBoxValue: string | string[] | undefined;
   onChangeFilterValue: (o: string) => void;
   onChangeFilterComboBoxValue: (o: string | string[]) => void;
-  type: TSurveyQuestionType | "Attributes" | "Tags" | undefined;
+  type: OptionsType.METADATA | TSurveyQuestionType | "Attributes" | "tags" | "language" | undefined;
   handleRemoveMultiSelect: (value: string[]) => void;
   disabled?: boolean;
+  defaultLanguageId: string;
 };
 
 const QuestionFilterComboBox = ({
@@ -35,6 +38,7 @@ const QuestionFilterComboBox = ({
   onChangeFilterValue,
   type,
   handleRemoveMultiSelect,
+  defaultLanguageId,
   disabled = false,
 }: QuestionFilterComboBoxProps) => {
   const [open, setOpen] = React.useState(false);
@@ -44,7 +48,10 @@ const QuestionFilterComboBox = ({
 
   // multiple when question type is multi selection
   const isMultiple =
-    type === TSurveyQuestionType.MultipleChoiceMulti || type === TSurveyQuestionType.MultipleChoiceSingle;
+    type === TSurveyQuestionType.MultipleChoiceMulti ||
+    type === TSurveyQuestionType.MultipleChoiceSingle ||
+    type === "language" ||
+    type === "tags";
 
   // when question type is multi selection so we remove the option from the options which has been already selected
   const options = isMultiple
@@ -147,14 +154,21 @@ const QuestionFilterComboBox = ({
                   <CommandItem
                     onSelect={() => {
                       !isMultiple
-                        ? onChangeFilterComboBoxValue(o)
+                        ? onChangeFilterComboBoxValue(
+                            typeof o === "object" ? getLocalizedValue(o, defaultLanguageId) : o
+                          )
                         : onChangeFilterComboBoxValue(
-                            Array.isArray(filterComboBoxValue) ? [...filterComboBoxValue, o] : [o]
+                            Array.isArray(filterComboBoxValue)
+                              ? [
+                                  ...filterComboBoxValue,
+                                  typeof o === "object" ? getLocalizedValue(o, defaultLanguageId) : o,
+                                ]
+                              : [typeof o === "object" ? getLocalizedValue(o, defaultLanguageId) : o]
                           );
                       !isMultiple && setOpen(false);
                     }}
                     className="cursor-pointer">
-                    {o}
+                    {typeof o === "object" ? getLocalizedValue(o, defaultLanguageId) : o}
                   </CommandItem>
                 ))}
               </CommandGroup>

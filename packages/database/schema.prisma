@@ -130,6 +130,7 @@ model Response {
   personAttributes Json?
   // singleUseId, used to prevent multiple responses
   singleUseId      String?
+  language         String?
 
   @@unique([surveyId, singleUseId])
   @@index([surveyId, createdAt]) // to determine monthly response count
@@ -415,6 +416,9 @@ model Product {
   placement            WidgetPlacement @default(bottomRight)
   clickOutsideClose    Boolean         @default(true)
   darkOverlay          Boolean         @default(false)
+  /// @zod.custom(imports.ZLanguages)
+  /// [Languages]
+  languages            Json            @default("[{\"id\":\"en\",\"default\":true,\"alias\":null}]")
 
   @@unique([teamId, name])
   @@index([teamId])

@@ -3,13 +3,19 @@
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/solid";
 import { createId } from "@paralleldrive/cuid2";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 
-import { cn } from "@formbricks/lib/cn";
-import { TSurvey, TSurveyMultipleChoiceMultiQuestion } from "@formbricks/types/surveys";
+import LocalizedInput from "@formbricks/ee/multiLanguage/components/LocalizedInput";
+import {
+  createI18nString,
+  extractLanguageIds,
+  isLabelValidForAllLanguages,
+} from "@formbricks/lib/i18n/utils";
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
+import { TLanguage } from "@formbricks/types/product";
+import { TI18nString, TSurvey, TSurveyMultipleChoiceMultiQuestion } from "@formbricks/types/surveys";
 import { Button } from "@formbricks/ui/Button";
-import { Input } from "@formbricks/ui/Input";
 import { Label } from "@formbricks/ui/Label";
-import QuestionFormInput from "@formbricks/ui/QuestionFormInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@formbricks/ui/Select";
 
 interface OpenQuestionFormProps {
@@ -18,7 +24,11 @@ interface OpenQuestionFormProps {
   questionIdx: number;
   updateQuestion: (questionIdx: number, updatedAttributes: any) => void;
   lastQuestion: boolean;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
   isInvalid: boolean;
+  defaultLanguageId: string;
 }
 
 export default function MultipleChoiceMultiForm({
@@ -27,12 +37,17 @@ export default function MultipleChoiceMultiForm({
   updateQuestion,
   isInvalid,
   localSurvey,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
+  defaultLanguageId,
 }: OpenQuestionFormProps): JSX.Element {
   const lastChoiceRef = useRef<HTMLInputElement>(null);
   const [isNew, setIsNew] = useState(true);
   const [showSubheader, setShowSubheader] = useState(!!question.subheader);
   const questionRef = useRef<HTMLInputElement>(null);
   const [isInvalidValue, setisInvalidValue] = useState<string | null>(null);
+  const surveyLanguageIds = extractLanguageIds(surveyLanguages);
 
   const shuffleOptionsTypes = {
     none: {
@@ -52,8 +67,8 @@ export default function MultipleChoiceMultiForm({
     },
   };
 
-  const updateChoice = (choiceIdx: number, updatedAttributes: { label: string }) => {
-    const newLabel = updatedAttributes.label;
+  const updateChoice = (choiceIdx: number, updatedAttributes: { label: TI18nString }) => {
+    const newLabel = updatedAttributes.label.en;
     const oldLabel = question.choices[choiceIdx].label;
     let newChoices: any[] = [];
     if (question.choices) {
@@ -67,9 +82,11 @@ export default function MultipleChoiceMultiForm({
     question.logic?.forEach((logic) => {
       let newL: string | string[] | undefined = logic.value;
       if (Array.isArray(logic.value)) {
-        newL = logic.value.map((value) => (value === oldLabel ? newLabel : value));
+        newL = logic.value.map((value) =>
+          newLabel && value === oldLabel[selectedLanguageId] ? newLabel : value
+        );
       } else {
-        newL = logic.value === oldLabel ? newLabel : logic.value;
+        newL = logic.value === oldLabel[selectedLanguageId] ? newLabel : logic.value;
       }
       newLogic.push({ ...logic, value: newL });
     });
@@ -79,19 +96,15 @@ export default function MultipleChoiceMultiForm({
   const findDuplicateLabel = () => {
     for (let i = 0; i < question.choices.length; i++) {
       for (let j = i + 1; j < question.choices.length; j++) {
-        if (question.choices[i].label.trim() === question.choices[j].label.trim()) {
-          return question.choices[i].label.trim(); // Return the duplicate label
+        if (
+          getLocalizedValue(question.choices[i].label, selectedLanguageId).trim() ===
+          getLocalizedValue(question.choices[j].label, selectedLanguageId).trim()
+        ) {
+          return getLocalizedValue(question.choices[i].label, selectedLanguageId).trim(); // Return the duplicate label
         }
       }
     }
     return null;
-  };
-
-  const findEmptyLabel = () => {
-    for (let i = 0; i < question.choices.length; i++) {
-      if (question.choices[i].label.trim() === "") return true;
-    }
-    return false;
   };
 
   const addChoice = (choiceIdx?: number) => {
@@ -101,7 +114,10 @@ export default function MultipleChoiceMultiForm({
     if (otherChoice) {
       newChoices = newChoices.filter((choice) => choice.id !== "other");
     }
-    const newChoice = { id: createId(), label: "" };
+    const newChoice = {
+      id: createId(),
+      label: createI18nString("", surveyLanguageIds, defaultLanguageId),
+    };
     if (choiceIdx !== undefined) {
       newChoices.splice(choiceIdx + 1, 0, newChoice);
     } else {
@@ -116,7 +132,10 @@ export default function MultipleChoiceMultiForm({
   const addOther = () => {
     if (question.choices.filter((c) => c.id === "other").length === 0) {
       const newChoices = !question.choices ? [] : question.choices.filter((c) => c.id !== "other");
-      newChoices.push({ id: "other", label: "Other" });
+      newChoices.push({
+        id: "other",
+        label: createI18nString("Other", surveyLanguageIds, defaultLanguageId),
+      });
       updateQuestion(questionIdx, {
         choices: newChoices,
         ...(question.shuffleOption === shuffleOptionsTypes.all.id && {
@@ -129,7 +148,7 @@ export default function MultipleChoiceMultiForm({
   const deleteChoice = (choiceIdx: number) => {
     const newChoices = !question.choices ? [] : question.choices.filter((_, idx) => idx !== choiceIdx);
 
-    const choiceValue = question.choices[choiceIdx].label;
+    const choiceValue = question.choices[choiceIdx].label[selectedLanguageId];
     if (isInvalidValue === choiceValue) {
       setisInvalidValue(null);
     }
@@ -160,43 +179,50 @@ export default function MultipleChoiceMultiForm({
     }
   }, [isNew]);
 
-  const environmentId = localSurvey.environmentId;
-
   return (
     <form>
-      <QuestionFormInput
+      <LocalizedInput
+        id="headline"
+        name="headline"
+        value={question.headline}
         localSurvey={localSurvey}
-        environmentId={environmentId}
-        isInvalid={isInvalid}
-        ref={questionRef}
-        questionId={question.id}
         questionIdx={questionIdx}
+        surveyLanguages={surveyLanguages}
+        isInvalid={isInvalid}
         updateQuestion={updateQuestion}
-        type="headline"
+        selectedLanguageId={selectedLanguageId}
+        setSelectedLanguageId={setSelectedLanguageId}
+        defaultLanguageId={defaultLanguageId}
       />
 
       <div>
         {showSubheader && (
-          <>
-            <div className="flex w-full items-center">
-              <QuestionFormInput
+          <div className="inline-flex w-full items-center">
+            <div className="w-full">
+              <LocalizedInput
+                id="subheader"
+                name="subheader"
+                value={question.subheader}
                 localSurvey={localSurvey}
-                environmentId={environmentId}
-                isInvalid={isInvalid}
-                questionId={question.id}
                 questionIdx={questionIdx}
+                surveyLanguages={surveyLanguages}
+                isInvalid={isInvalid}
                 updateQuestion={updateQuestion}
-                type="subheader"
-              />
-              <TrashIcon
-                className="ml-2 mt-10 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-500"
-                onClick={() => {
-                  setShowSubheader(false);
-                  updateQuestion(questionIdx, { subheader: "" });
-                }}
+                selectedLanguageId={selectedLanguageId}
+                setSelectedLanguageId={setSelectedLanguageId}
+                defaultLanguageId={defaultLanguageId}
+                className=""
               />
             </div>
-          </>
+
+            <TrashIcon
+              className="ml-2 mt-10 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-500"
+              onClick={() => {
+                setShowSubheader(false);
+                updateQuestion(questionIdx, { subheader: undefined });
+              }}
+            />
+          </div>
         )}
         {!showSubheader && (
           <Button
@@ -204,7 +230,13 @@ export default function MultipleChoiceMultiForm({
             variant="minimal"
             className="mt-3"
             type="button"
-            onClick={() => setShowSubheader(true)}>
+            onClick={() => {
+              updateQuestion(questionIdx, {
+                subheader: createI18nString("", surveyLanguageIds, defaultLanguageId),
+              });
+              setShowSubheader(true);
+            }}>
+            {" "}
             <PlusIcon className="mr-1 h-4 w-4" />
             Add Description
           </Button>
@@ -213,45 +245,61 @@ export default function MultipleChoiceMultiForm({
 
       <div className="mt-3">
         <Label htmlFor="choices">Options</Label>
-        <div className="mt-2 space-y-2" id="choices">
+        <div className="mt-2 space-y-1" id="choices">
           {question.choices &&
             question.choices.map((choice, choiceIdx) => (
               <div key={choiceIdx} className="inline-flex w-full items-center">
                 <div className="flex w-full space-x-2">
-                  <Input
-                    ref={choiceIdx === question.choices.length - 1 ? lastChoiceRef : null}
-                    id={choice.id}
-                    name={choice.id}
-                    value={choice.label}
-                    className={cn(choice.id === "other" && "border-dashed")}
+                  <LocalizedInput
+                    key={choice.id}
+                    id={`choice-${choiceIdx}`}
+                    name={`choice-${choiceIdx}`}
+                    localSurvey={localSurvey}
                     placeholder={choice.id === "other" ? "Other" : `Option ${choiceIdx + 1}`}
-                    onChange={(e) => updateChoice(choiceIdx, { label: e.target.value })}
+                    questionIdx={questionIdx}
+                    value={choice.label}
                     onBlur={() => {
                       const duplicateLabel = findDuplicateLabel();
                       if (duplicateLabel) {
+                        toast.error("Duplicate choices");
                         setisInvalidValue(duplicateLabel);
-                      } else if (findEmptyLabel()) {
-                        setisInvalidValue("");
                       } else {
                         setisInvalidValue(null);
                       }
                     }}
+                    surveyLanguages={surveyLanguages}
+                    updateChoice={updateChoice}
+                    selectedLanguageId={selectedLanguageId}
+                    setSelectedLanguageId={setSelectedLanguageId}
                     isInvalid={
-                      (isInvalidValue === "" && choice.label.trim() === "") ||
-                      (isInvalidValue !== null && choice.label.trim() === isInvalidValue.trim())
+                      isInvalid &&
+                      !isLabelValidForAllLanguages(question.choices[choiceIdx].label, surveyLanguageIds)
                     }
+                    defaultLanguageId={defaultLanguageId}
+                    className={`${choice.id === "other" ? "border border-dashed" : ""}`}
                   />
                   {choice.id === "other" && (
-                    <Input
-                      id="otherInputLabel"
-                      name="otherInputLabel"
-                      value={question.otherOptionPlaceholder ?? "Please specify"}
-                      placeholder={question.otherOptionPlaceholder ?? "Please specify"}
-                      className={cn(choice.id === "other" && "border-dashed")}
-                      onChange={(e) => {
-                        if (e.target.value.trim() == "") e.target.value = "";
-                        updateQuestion(questionIdx, { otherOptionPlaceholder: e.target.value });
-                      }}
+                    <LocalizedInput
+                      id="otherOptionPlaceholder"
+                      name="otherOptionPlaceholder"
+                      localSurvey={localSurvey}
+                      placeholder={"Please specify"}
+                      questionIdx={questionIdx}
+                      value={
+                        question.otherOptionPlaceholder
+                          ? question.otherOptionPlaceholder
+                          : createI18nString("Please specify", surveyLanguageIds, defaultLanguageId)
+                      }
+                      surveyLanguages={surveyLanguages}
+                      updateQuestion={updateQuestion}
+                      selectedLanguageId={selectedLanguageId}
+                      setSelectedLanguageId={setSelectedLanguageId}
+                      isInvalid={
+                        isInvalid &&
+                        !isLabelValidForAllLanguages(question.choices[choiceIdx].label, surveyLanguageIds)
+                      }
+                      defaultLanguageId={defaultLanguageId}
+                      className="border border-dashed"
                     />
                   )}
                 </div>

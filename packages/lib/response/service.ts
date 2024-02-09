@@ -46,6 +46,7 @@ export const responseSelection = {
   ttc: true,
   personAttributes: true,
   singleUseId: true,
+  language: true,
   person: {
     select: {
       id: true,
@@ -211,7 +212,7 @@ export const createResponse = async (responseInput: TResponseInput): Promise<TRe
   validateInputs([responseInput, ZResponseInput]);
   captureTelemetry("response created");
 
-  const { environmentId, userId, surveyId, finished, data, meta, singleUseId } = responseInput;
+  const { environmentId, language, userId, surveyId, finished, data, meta, singleUseId } = responseInput;
 
   try {
     let person: TPerson | null = null;
@@ -233,6 +234,7 @@ export const createResponse = async (responseInput: TResponseInput): Promise<TRe
         },
         finished: finished,
         data: data,
+        language: language,
         ...(person?.id && {
           person: {
             connect: {
@@ -314,10 +316,10 @@ export const createResponseLegacy = async (responseInput: TResponseLegacyInput):
 
         ...(responseInput.meta && ({ meta: responseInput?.meta } as Prisma.JsonObject)),
         singleUseId: responseInput.singleUseId,
+        language: responseInput.language,
       },
       select: responseSelection,
     });
-
     const response: TResponse = {
       ...responsePrisma,
       person: responsePrisma.person ? transformPrismaPerson(responsePrisma.person) : null,
@@ -333,7 +335,6 @@ export const createResponseLegacy = async (responseInput: TResponseLegacyInput):
     responseNoteCache.revalidate({
       responseId: response.id,
     });
-
     return response;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -534,6 +535,7 @@ export const updateResponse = async (
         ? calculateTtcTotal(responseInput.ttc)
         : responseInput.ttc
       : {};
+    const language = responseInput.language;
 
     const responsePrisma = await prisma.response.update({
       where: {
@@ -543,6 +545,7 @@ export const updateResponse = async (
         finished: responseInput.finished,
         data,
         ttc,
+        language,
       },
       select: responseSelection,
     });

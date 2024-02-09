@@ -4,6 +4,7 @@ import { InboxStackIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useState } from "react";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { getPersonIdentifier } from "@formbricks/lib/person/util";
 import { timeSince } from "@formbricks/lib/time";
 import type { TSurveyQuestionSummary } from "@formbricks/types/surveys";
@@ -14,12 +15,14 @@ interface OpenTextSummaryProps {
   questionSummary: TSurveyQuestionSummary<TSurveyOpenTextQuestion>;
   environmentId: string;
   responsesPerPage: number;
+  defaultLanguageId: string;
 }
 
 export default function OpenTextSummary({
   questionSummary,
   environmentId,
   responsesPerPage,
+  defaultLanguageId,
 }: OpenTextSummaryProps) {
   const questionTypeInfo = questionTypes.find((type) => type.id === questionSummary.question.type);
   const [displayCount, setDisplayCount] = useState(responsesPerPage);
@@ -27,7 +30,8 @@ export default function OpenTextSummary({
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
       <div className="space-y-2 px-4 pb-5 pt-6 md:px-6">
-        <Headline headline={questionSummary.question.headline} />
+        <Headline headline={getLocalizedValue(questionSummary.question.headline, defaultLanguageId)} />
+
         <div className="flex space-x-2 text-xs font-semibold text-slate-600 md:text-sm">
           <div className="flex items-center rounded-lg bg-slate-100 p-2 ">
             {questionTypeInfo && <questionTypeInfo.icon className="mr-2 h-4 w-4 " />}

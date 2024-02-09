@@ -13,6 +13,7 @@ import { ChevronDown, ChevronUp, DownloadIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { getTodaysDateFormatted } from "@formbricks/lib/time";
 import useClickOutside from "@formbricks/lib/useClickOutside";
 import { TResponse } from "@formbricks/types/responses";
@@ -48,6 +49,7 @@ interface CustomFilterProps {
   survey: TSurvey;
   responses: TResponse[];
   totalResponses: TResponse[];
+  defaultLanguageId: string;
 }
 
 const getDifferenceOfDays = (from, to) => {
@@ -61,7 +63,13 @@ const getDifferenceOfDays = (from, to) => {
   }
 };
 
-const CustomFilter = ({ environmentTags, responses, survey, totalResponses }: CustomFilterProps) => {
+const CustomFilter = ({
+  environmentTags,
+  responses,
+  survey,
+  totalResponses,
+  defaultLanguageId,
+}: CustomFilterProps) => {
   const { setSelectedOptions, dateRange, setDateRange } = useResponseFilter();
   const [filterRange, setFilterRange] = useState<FilterDropDownLabels>(
     dateRange.from && dateRange.to
@@ -110,7 +118,7 @@ const CustomFilter = ({ environmentTags, responses, survey, totalResponses }: Cu
           if (answer) {
             updatedResponse.push({
               id: createId(),
-              question: question.headline,
+              question: getLocalizedValue(question.headline, defaultLanguageId),
               type: question.type,
               scale: question.scale,
               range: question.range,
@@ -157,7 +165,9 @@ const CustomFilter = ({ environmentTags, responses, survey, totalResponses }: Cu
   const downloadResponses = useCallback(
     async (filter: FilterDownload, filetype: "csv" | "xlsx") => {
       const downloadResponse = filter === FilterDownload.ALL ? totalResponses : responses;
-      const questionNames = survey.questions?.map((question) => question.headline);
+      const questionNames = survey.questions?.map((question) =>
+        getLocalizedValue(question.headline, defaultLanguageId)
+      );
       const hiddenFieldIds = survey.hiddenFields.fieldIds;
       const hiddenFieldResponse = {};
       let metaDataFields = extracMetadataKeys(downloadResponse[0].meta);
@@ -268,6 +278,7 @@ const CustomFilter = ({ environmentTags, responses, survey, totalResponses }: Cu
 
       URL.revokeObjectURL(downloadUrl);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [downloadFileName, responses, totalResponses, survey, extracMetadataKeys]
   );
 
@@ -339,7 +350,7 @@ const CustomFilter = ({ environmentTags, responses, survey, totalResponses }: Cu
     <>
       <div className="relative mb-12 flex justify-between">
         <div className="flex justify-stretch gap-x-1.5">
-          <ResponseFilter />
+          <ResponseFilter defaultLanguageId={defaultLanguageId} />
           <DropdownMenu
             onOpenChange={(value) => {
               value && handleDatePickerClose();

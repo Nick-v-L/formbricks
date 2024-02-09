@@ -1,10 +1,14 @@
+"use client";
+
 import UrlShortenerForm from "@/app/(app)/environments/[environmentId]/components/UrlShortenerForm";
+import { LanguageIcon } from "@heroicons/react/24/outline";
 import { DocumentDuplicateIcon } from "@heroicons/react/24/solid";
 import { RefreshCcw } from "lucide-react";
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 
+import { TLanguage } from "@formbricks/types/product";
 import { Button } from "@formbricks/ui/Button";
 
 interface LinkTabProps {
@@ -12,6 +16,8 @@ interface LinkTabProps {
   webAppUrl: string;
   generateNewSingleUseLink: () => void;
   isSingleUseLinkSurvey: boolean;
+  surveyLanguages: TLanguage[];
+  setLanguage: (langauge: string) => void;
 }
 
 export default function LinkTab({
@@ -19,9 +25,11 @@ export default function LinkTab({
   webAppUrl,
   generateNewSingleUseLink,
   isSingleUseLinkSurvey,
+  surveyLanguages,
+  setLanguage,
 }: LinkTabProps) {
   const linkTextRef = useRef(null);
-
+  const [showLanguageSelect, setShowLanguageSelect] = useState(false);
   const handleTextSelection = () => {
     if (linkTextRef.current) {
       const range = document.createRange();
@@ -71,6 +79,34 @@ export default function LinkTab({
             {surveyUrl}
           </div>
           <div className="mt-2 flex items-center justify-center space-x-2">
+            {surveyLanguages.length > 1 && (
+              <div className="relative">
+                {showLanguageSelect && (
+                  <div className="absolute left-0 right-0 top-12 z-30 rounded-lg border bg-slate-900 p-1 text-sm text-white">
+                    {surveyLanguages.map((language) => {
+                      return (
+                        <div
+                          className="rounded-md px-1 py-2 hover:cursor-pointer hover:bg-slate-700"
+                          onClick={() => {
+                            setLanguage(language.id);
+                            setShowLanguageSelect(false);
+                          }}>
+                          {language.alias}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <Button
+                  variant="secondary"
+                  className=""
+                  title="Select Language"
+                  aria-label="Select Language"
+                  onClick={() => setShowLanguageSelect(!showLanguageSelect)}>
+                  <LanguageIcon className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
             <Button
               variant="darkCTA"
               className="inline"

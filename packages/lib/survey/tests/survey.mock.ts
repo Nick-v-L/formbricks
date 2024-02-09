@@ -47,6 +47,7 @@ export const mockProduct: TProduct = {
   clickOutsideClose: false,
   darkOverlay: false,
   environments: [],
+  languages: [{ id: "en", alias: "English", default: true }],
 };
 
 export const mockDisplay = {
@@ -125,14 +126,14 @@ export const mockAttributeFilter: TSurveyAttributeFilter = {
 const mockQuestion: TSurveyQuestion = {
   id: mockId,
   type: TSurveyQuestionType.OpenText,
-  headline: "Question Text",
+  headline: { en: "Question Text" },
   required: false,
   inputType: "text",
 };
 
 const mockWelcomeCard: TSurveyWelcomeCard = {
   enabled: false,
-  headline: "My welcome card",
+  headline: { en: "My welcome card" },
   timeToFinish: false,
   showResponseCount: false,
 };

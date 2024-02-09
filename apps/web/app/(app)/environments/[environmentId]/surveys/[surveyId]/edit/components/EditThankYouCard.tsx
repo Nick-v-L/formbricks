@@ -3,11 +3,12 @@
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { useState } from "react";
 
+import LocalizedInput from "@formbricks/ee/multiLanguage/components/LocalizedInput";
 import { cn } from "@formbricks/lib/cn";
+import { TLanguage } from "@formbricks/types/product";
 import { TSurvey } from "@formbricks/types/surveys";
 import { Input } from "@formbricks/ui/Input";
 import { Label } from "@formbricks/ui/Label";
-import QuestionFormInput from "@formbricks/ui/QuestionFormInput";
 import { Switch } from "@formbricks/ui/Switch";
 
 interface EditThankYouCardProps {
@@ -15,6 +16,11 @@ interface EditThankYouCardProps {
   setLocalSurvey: (survey: TSurvey) => void;
   setActiveQuestionId: (id: string | null) => void;
   activeQuestionId: string | null;
+  isInvalid: boolean;
+  selectedLanguageId: string;
+  setSelectedLanguageId: (languageId: string) => void;
+  surveyLanguages: TLanguage[];
+  defaultLanguageId: string;
 }
 
 export default function EditThankYouCard({
@@ -22,6 +28,11 @@ export default function EditThankYouCard({
   setLocalSurvey,
   setActiveQuestionId,
   activeQuestionId,
+  isInvalid,
+  selectedLanguageId,
+  setSelectedLanguageId,
+  surveyLanguages,
+  defaultLanguageId,
 }: EditThankYouCardProps) {
   // const [open, setOpen] = useState(false);
   let open = activeQuestionId == "end";
@@ -37,13 +48,14 @@ export default function EditThankYouCard({
   };
 
   const updateSurvey = (data) => {
-    setLocalSurvey({
+    const updatedSurvey = {
       ...localSurvey,
       thankYouCard: {
         ...localSurvey.thankYouCard,
         ...data,
       },
-    });
+    };
+    setLocalSurvey(updatedSurvey);
   };
 
   return (
@@ -54,8 +66,9 @@ export default function EditThankYouCard({
       )}>
       <div
         className={cn(
-          open ? "bg-slate-50" : "bg-white group-hover:bg-slate-50",
-          "flex w-10 items-center justify-center rounded-l-lg border-b border-l border-t group-aria-expanded:rounded-bl-none"
+          open ? "bg-slate-50" : "",
+          "flex w-10 items-center justify-center rounded-l-lg border-b border-l border-t group-aria-expanded:rounded-bl-none",
+          isInvalid ? "bg-red-400" : "bg-white group-hover:bg-slate-50"
         )}>
         <p>🙏</p>
       </div>
@@ -96,29 +109,33 @@ export default function EditThankYouCard({
         </Collapsible.CollapsibleTrigger>
         <Collapsible.CollapsibleContent className="px-4 pb-6">
           <form>
-            <QuestionFormInput
+            <LocalizedInput
+              id="headline"
+              name="headline"
+              value={localSurvey?.thankYouCard?.headline}
               localSurvey={localSurvey}
-              environmentId={localSurvey.environmentId}
-              isInvalid={false}
-              questionId="end"
               questionIdx={localSurvey.questions.length}
+              surveyLanguages={surveyLanguages}
+              isInvalid={isInvalid}
               updateSurvey={updateSurvey}
-              type="headline"
+              selectedLanguageId={selectedLanguageId}
+              setSelectedLanguageId={setSelectedLanguageId}
+              defaultLanguageId={defaultLanguageId}
             />
 
-            <div>
-              <div className="flex w-full items-center">
-                <QuestionFormInput
-                  localSurvey={localSurvey}
-                  environmentId={localSurvey.environmentId}
-                  isInvalid={false}
-                  questionId="end"
-                  questionIdx={localSurvey.questions.length}
-                  updateSurvey={updateSurvey}
-                  type="subheader"
-                />
-              </div>
-            </div>
+            <LocalizedInput
+              id="subheader"
+              name="subheader"
+              value={localSurvey.thankYouCard.subheader}
+              localSurvey={localSurvey}
+              questionIdx={localSurvey.questions.length}
+              surveyLanguages={surveyLanguages}
+              isInvalid={isInvalid}
+              updateSurvey={updateSurvey}
+              selectedLanguageId={selectedLanguageId}
+              setSelectedLanguageId={setSelectedLanguageId}
+              defaultLanguageId={defaultLanguageId}
+            />
             <div className="mt-4">
               <div className="flex items-center space-x-1">
                 <Switch

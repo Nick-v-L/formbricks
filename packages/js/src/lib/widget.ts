@@ -29,7 +29,13 @@ export const renderWidget = async (survey: TSurvey) => {
   }
 
   const product = config.get().state.product;
+  const defaultLanguageId = product.languages.find((language) => language.default === true)?.id;
 
+  if (!defaultLanguageId) {
+    throw new Error("Default language not found");
+  }
+
+  const languageId = config.get().language ?? defaultLanguageId;
   const surveyState = new SurveyState(survey.id, null, null, config.get().userId);
 
   const responseQueue = new ResponseQueue(
@@ -43,7 +49,6 @@ export const renderWidget = async (survey: TSurvey) => {
     },
     surveyState
   );
-
   const productOverwrites = survey.productOverwrites ?? {};
   const brandColor = productOverwrites.brandColor ?? product.brandColor;
   const highlightBorderColor = productOverwrites.highlightBorderColor ?? product.highlightBorderColor;
@@ -61,8 +66,10 @@ export const renderWidget = async (survey: TSurvey) => {
       isBrandingEnabled: isBrandingEnabled,
       clickOutside,
       darkOverlay,
+      languageId,
       highlightBorderColor,
       placement,
+      defaultLanguageId,
       getSetIsError: (f: (value: boolean) => void) => {
         setIsError = f;
       },
@@ -178,6 +185,7 @@ export const closeSurvey = async (): Promise<void> => {
       apiHost: config.get().apiHost,
       environmentId: config.get().environmentId,
       userId: config.get().userId,
+      language: config.get().language,
     });
     surveyRunning = false;
   } catch (e) {

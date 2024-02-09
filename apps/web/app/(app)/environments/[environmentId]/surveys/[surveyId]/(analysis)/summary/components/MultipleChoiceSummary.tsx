@@ -4,6 +4,7 @@ import { InboxStackIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { getPersonIdentifier } from "@formbricks/lib/person/util";
 import type { TSurveyQuestionSummary } from "@formbricks/types/surveys";
 import {
@@ -21,6 +22,7 @@ interface MultipleChoiceSummaryProps {
   environmentId: string;
   surveyType: string;
   responsesPerPage: number;
+  defaultLanguageId: string;
 }
 
 interface ChoiceResult {
@@ -43,6 +45,7 @@ export default function MultipleChoiceSummary({
   environmentId,
   surveyType,
   responsesPerPage,
+  defaultLanguageId,
 }: MultipleChoiceSummaryProps) {
   const isSingleChoice = questionSummary.question.type === TSurveyQuestionType.MultipleChoiceSingle;
   const [otherDisplayCount, setOtherDisplayCount] = useState(responsesPerPage);
@@ -54,9 +57,9 @@ export default function MultipleChoiceSummary({
     // build a dictionary of choices
     const resultsDict: { [key: string]: ChoiceResult } = {};
     for (const choice of questionSummary.question.choices) {
-      resultsDict[choice.label] = {
+      resultsDict[getLocalizedValue(choice.label, defaultLanguageId)] = {
         id: choice.id,
-        label: choice.label,
+        label: getLocalizedValue(choice.label, defaultLanguageId),
         count: 0,
         percentage: 0,
         otherValues: [],
@@ -79,7 +82,6 @@ export default function MultipleChoiceSummary({
         }
       }
     };
-
     // count the responses
     for (const response of questionSummary.responses) {
       // if single choice, only add responses that are in the choices
@@ -117,7 +119,7 @@ export default function MultipleChoiceSummary({
       return b.count - a.count;
     });
     return results;
-  }, [questionSummary, isSingleChoice]);
+  }, [questionSummary, isSingleChoice, defaultLanguageId]);
 
   const totalResponses = useMemo(() => {
     let total = 0;
@@ -130,7 +132,7 @@ export default function MultipleChoiceSummary({
   return (
     <div className=" rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
       <div className="space-y-2 px-4 pb-5 pt-6 md:px-6">
-        <Headline headline={questionSummary.question.headline} />
+        <Headline headline={getLocalizedValue(questionSummary.question.headline, defaultLanguageId)} />
 
         <div className="flex space-x-2 text-xs font-semibold text-slate-600 md:text-sm">
           <div className="flex items-center rounded-lg bg-slate-100 p-2">

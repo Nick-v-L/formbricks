@@ -30,6 +30,8 @@ interface LinkSurveyProps {
   webAppUrl: string;
   responseCount?: number;
   verifiedEmail?: string;
+  languageId: string;
+  defaultLanguageId: string;
 }
 
 export default function LinkSurvey({
@@ -43,6 +45,8 @@ export default function LinkSurvey({
   webAppUrl,
   responseCount,
   verifiedEmail,
+  languageId,
+  defaultLanguageId,
 }: LinkSurveyProps) {
   const responseId = singleUseResponse?.id;
   const searchParams = useSearchParams();
@@ -57,7 +61,7 @@ export default function LinkSurvey({
   );
 
   const prefillResponseData: TResponseData | undefined = prefillAnswer
-    ? getPrefillResponseData(survey.questions[0], survey, prefillAnswer)
+    ? getPrefillResponseData(survey.questions[0], survey, prefillAnswer, languageId)
     : undefined;
 
   const brandColor = survey.productOverwrites?.brandColor || product.brandColor;
@@ -153,6 +157,7 @@ export default function LinkSurvey({
         <SurveyInline
           survey={survey}
           brandColor={brandColor}
+          languageId={languageId}
           isBrandingEnabled={product.linkSurveyBranding}
           getSetIsError={(f: (value: boolean) => void) => {
             setIsError = f;
@@ -190,6 +195,7 @@ export default function LinkSurvey({
                 },
                 ttc: responseUpdate.ttc,
                 finished: responseUpdate.finished,
+                languageId,
                 meta: {
                   url: window.location.href,
                   source: sourceParam || "",
@@ -210,6 +216,7 @@ export default function LinkSurvey({
           autoFocus={autoFocus}
           prefillResponseData={prefillResponseData}
           responseCount={responseCount}
+          defaultLanguageId={defaultLanguageId}
         />
       </ContentWrapper>
     </>

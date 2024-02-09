@@ -76,7 +76,6 @@ export const SignupForm = ({
 
   const [showLogin, setShowLogin] = useState(false);
   const [isButtonEnabled, setButtonEnabled] = useState(true);
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [password, setPassword] = useState<string | null>(null);
   const [isValid, setIsValid] = useState(false);
@@ -156,12 +155,11 @@ export const SignupForm = ({
                     autoComplete="current-password"
                     placeholder="*******"
                     aria-placeholder="password"
-                    onFocus={() => setIsPasswordFocused(true)}
                     required
                     className="focus:border-brand focus:ring-brand block w-full rounded-md shadow-sm sm:text-sm"
                   />
                 </div>
-                {passwordResetEnabled && isPasswordFocused && (
+                {passwordResetEnabled && (
                   <div className="ml-1 text-right transition-all duration-500 ease-in-out">
                     <Link
                       href="/auth/forgot-password"

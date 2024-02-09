@@ -1,7 +1,7 @@
 "use client";
 
 import { EnvelopeIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { CheckCircleIcon, LanguageIcon } from "@heroicons/react/24/solid";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { ReactNode, useState } from "react";
 import toast from "react-hot-toast";
 
 import { cn } from "@formbricks/lib/cn";
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { useMembershipRole } from "@formbricks/lib/membership/hooks/useMembershipRole";
 import { getAccessFlags } from "@formbricks/lib/membership/utils";
 import { getPersonIdentifier } from "@formbricks/lib/person/util";
@@ -28,8 +29,7 @@ import { PictureSelectionResponse } from "../PictureSelectionResponse";
 import { RatingResponse } from "../RatingResponse";
 import { SurveyStatusIndicator } from "../SurveyStatusIndicator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../Tooltip";
-import { deleteResponseAction } from "./actions";
-import { getResponseAction } from "./actions";
+import { deleteResponseAction, getResponseAction } from "./actions";
 import QuestionSkip from "./components/QuestionSkip";
 import ResponseNotes from "./components/ResponseNote";
 import ResponseTagsWrapper from "./components/ResponseTagsWrapper";
@@ -42,6 +42,7 @@ export interface SingleResponseCardProps {
   environmentTags: TTag[];
   environment: TEnvironment;
   setFetchedResponses?: React.Dispatch<React.SetStateAction<TResponse[]>>;
+  defaultLanguageId: string;
 }
 
 interface TooltipRendererProps {
@@ -81,6 +82,7 @@ export default function SingleResponseCard({
   environmentTags,
   environment,
   setFetchedResponses,
+  defaultLanguageId,
 }: SingleResponseCardProps) {
   const environmentId = survey.environmentId;
   const router = useRouter();
@@ -247,53 +249,61 @@ export default function SingleResponseCard({
         )}>
         <div className="space-y-2 px-6 pb-5 pt-6">
           <div className="flex items-center justify-between">
-            {pageType === "response" && (
-              <div>
-                {response.person?.id ? (
-                  user ? (
-                    <Link
-                      className="group flex items-center"
-                      href={`/environments/${environmentId}/people/${response.person.id}`}>
-                      <TooltipRenderer shouldRender={renderTooltip} tooltipContent={tooltipContent}>
-                        <PersonAvatar personId={response.person.id} />
-                      </TooltipRenderer>
-                      <h3 className="ph-no-capture ml-4 pb-1 font-semibold text-slate-600 hover:underline">
-                        {displayIdentifier}
-                      </h3>
-                    </Link>
+            <div className="flex items-center justify-center space-x-4">
+              {pageType === "response" && (
+                <div>
+                  {response.person?.id ? (
+                    user ? (
+                      <Link
+                        className="group flex items-center"
+                        href={`/environments/${environmentId}/people/${response.person.id}`}>
+                        <TooltipRenderer shouldRender={renderTooltip} tooltipContent={tooltipContent}>
+                          <PersonAvatar personId={response.person.id} />
+                        </TooltipRenderer>
+                        <h3 className="ph-no-capture ml-4 pb-1 font-semibold text-slate-600 hover:underline">
+                          {displayIdentifier}
+                        </h3>
+                      </Link>
+                    ) : (
+                      <div className="group flex items-center">
+                        <TooltipRenderer shouldRender={renderTooltip} tooltipContent={tooltipContent}>
+                          <PersonAvatar personId={response.person.id} />
+                        </TooltipRenderer>
+                        <h3 className="ph-no-capture ml-4 pb-1 font-semibold text-slate-600">
+                          {displayIdentifier}
+                        </h3>
+                      </div>
+                    )
                   ) : (
                     <div className="group flex items-center">
                       <TooltipRenderer shouldRender={renderTooltip} tooltipContent={tooltipContent}>
-                        <PersonAvatar personId={response.person.id} />
+                        <PersonAvatar personId="anonymous" />
                       </TooltipRenderer>
-                      <h3 className="ph-no-capture ml-4 pb-1 font-semibold text-slate-600">
-                        {displayIdentifier}
-                      </h3>
+                      <h3 className="ml-4 pb-1 font-semibold text-slate-600">Anonymous</h3>
                     </div>
-                  )
-                ) : (
-                  <div className="group flex items-center">
-                    <TooltipRenderer shouldRender={renderTooltip} tooltipContent={tooltipContent}>
-                      <PersonAvatar personId="anonymous" />
-                    </TooltipRenderer>
-                    <h3 className="ml-4 pb-1 font-semibold text-slate-600">Anonymous</h3>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            {pageType === "people" && (
-              <div className="flex items-center justify-center space-x-2 rounded-full bg-slate-100 p-1 px-2 text-sm text-slate-600">
-                {(survey.type === "link" || environment.widgetSetupCompleted) && (
-                  <SurveyStatusIndicator status={survey.status} />
-                )}
-                <Link
-                  className="hover:underline"
-                  href={`/environments/${environmentId}/surveys/${survey.id}/summary`}>
-                  {survey.name}
-                </Link>
-              </div>
-            )}
+              {pageType === "people" && (
+                <div className="flex items-center justify-center space-x-2 rounded-full bg-slate-100 p-1 px-2 text-sm text-slate-600">
+                  {(survey.type === "link" || environment.widgetSetupCompleted) && (
+                    <SurveyStatusIndicator status={survey.status} />
+                  )}
+                  <Link
+                    className="hover:underline"
+                    href={`/environments/${environmentId}/surveys/${survey.id}/summary`}>
+                    {survey.name}
+                  </Link>
+                </div>
+              )}
+              {response.language && (
+                <div className="flex space-x-2 rounded-full bg-slate-900 px-2 py-1 text-xs text-white">
+                  <div>{response.language}</div>
+                  <LanguageIcon className="h-4 w-4" />
+                </div>
+              )}
+            </div>
 
             <div className="flex space-x-4 text-sm">
               <time className="text-slate-500" dateTime={timeSince(response.updatedAt.toISOString())}>
@@ -327,6 +337,7 @@ export default function SingleResponseCard({
               questions={survey.questions}
               status={"welcomeCard"}
               isFirstQuestionAnswered={isFirstQuestionAnswered}
+              defaultLanguageId={defaultLanguageId}
             />
           )}
           <div className="space-y-6">
@@ -355,7 +366,9 @@ export default function SingleResponseCard({
               return (
                 <div key={`${question.id}`}>
                   {isValidValue(response.data[question.id]) ? (
-                    <p className="text-sm text-slate-500">{question.headline}</p>
+                    <p className="text-sm text-slate-500">
+                      {getLocalizedValue(question.headline, defaultLanguageId)}
+                    </p>
                   ) : (
                     <QuestionSkip
                       skippedQuestions={skipped}
@@ -367,6 +380,7 @@ export default function SingleResponseCard({
                           ? "skipped"
                           : "aborted"
                       }
+                      defaultLanguageId={defaultLanguageId}
                     />
                   )}
                   {typeof response.data[question.id] !== "object" ? (

@@ -9,10 +9,40 @@ import {
 import { QuestionFilterOptions } from "@/app/(app)/environments/[environmentId]/surveys/[surveyId]/components/ResponseFilter";
 import { isWithinInterval } from "date-fns";
 
+import { getLocalizedValue } from "@formbricks/lib/i18n/utils";
 import { TResponse } from "@formbricks/types/responses";
 import { TSurveyQuestionType } from "@formbricks/types/surveys";
 import { TSurvey } from "@formbricks/types/surveys";
 import { TTag } from "@formbricks/types/tags";
+
+export const generateQuestionsAndAttributes = (survey: TSurvey, responses: TResponse[]) => {
+  let questionNames: string[] = [];
+
+  if (survey?.questions) {
+    questionNames = survey.questions.map((question) => getLocalizedValue(question.headline, "en"));
+  }
+
+  const attributeMap: Record<string, Record<string, string | number>> = {};
+
+  if (responses) {
+    responses.forEach((response) => {
+      const { person } = response;
+      if (person !== null) {
+        const { id, attributes } = person;
+        Object.keys(attributes).forEach((attributeName) => {
+          if (!attributeMap.hasOwnProperty(attributeName)) {
+            attributeMap[attributeName] = {};
+          }
+          attributeMap[attributeName][id] = attributes[attributeName];
+        });
+      }
+    });
+  }
+  return {
+    questionNames,
+    attributeMap,
+  };
+};
 
 const conditionOptions = {
   openText: ["is"],
@@ -21,9 +51,10 @@ const conditionOptions = {
   nps: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
   rating: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
   cta: ["is"],
-  tags: ["is"],
+  tags: ["Includes all", "Includes either"],
   userAttributes: ["Equals", "Not equals"],
   consent: ["is"],
+  languages: ["includes"],
 };
 const filterOptions = {
   openText: ["Filled out", "Skipped"],
@@ -78,7 +109,7 @@ export const generateQuestionAndFilterOptions = (
   survey.questions.forEach((q) => {
     if (Object.keys(conditionOptions).includes(q.type)) {
       questionsOptions.push({
-        label: q.headline,
+        label: getLocalizedValue(q.headline, "en"),
         questionType: q.type,
         type: OptionsType.QUESTIONS,
         id: q.id,
@@ -109,21 +140,6 @@ export const generateQuestionAndFilterOptions = (
     }
   });
 
-  const tagsOptions = environmentTags?.map((t) => {
-    return { label: t.name, type: OptionsType.TAGS, id: t.id };
-  });
-  if (tagsOptions && tagsOptions?.length > 0) {
-    questionOptions = [...questionOptions, { header: OptionsType.TAGS, option: tagsOptions }];
-    environmentTags?.forEach((t) => {
-      questionFilterOptions.push({
-        type: "Tags",
-        filterOptions: conditionOptions.tags,
-        filterComboBoxOptions: filterOptions.tags,
-        id: t.id,
-      });
-    });
-  }
-
   const attributes = getPersonAttributes(responses);
   if (attributes) {
     questionOptions = [
@@ -143,6 +159,37 @@ export const generateQuestionAndFilterOptions = (
         id: a,
       });
     });
+  }
+  const tagsOptions = environmentTags?.map((t) => {
+    return t.name;
+  });
+  if (Object.keys(survey.questions[0].headline).length > 1) {
+    // If so, add the LANGUAGES filter to the questionOptions array.
+    questionOptions.push({
+      header: OptionsType.METADATA,
+      option: [
+        { label: "Language", type: "language", id: "language" },
+        { label: "Tags", type: "tags", id: "tags" },
+      ],
+    });
+    questionFilterOptions.push({
+      type: "language",
+      filterOptions: conditionOptions.languages,
+      filterComboBoxOptions: Array.from(
+        new Set(
+          responses.filter((response) => response.language != null).map((response) => response.language)
+        )
+      ),
+      id: "language",
+    });
+    if (tagsOptions && tagsOptions.length > 0) {
+      questionFilterOptions.push({
+        type: "tags",
+        filterOptions: conditionOptions.tags,
+        filterComboBoxOptions: tagsOptions,
+        id: "tags",
+      });
+    }
   }
 
   return { questionOptions: [...questionOptions], questionFilterOptions: [...questionFilterOptions] };
@@ -236,7 +283,6 @@ export const getFilterResponses = (
       }),
     };
   });
-
   // filtering the responses according to the value selected
   selectedFilter.filter.forEach((filter) => {
     if (filter.questionType?.type === "Questions") {
@@ -426,19 +472,37 @@ export const getFilterResponses = (
           break;
       }
     }
-    if (filter.questionType?.type === "Tags") {
-      toBeFilterResponses = toBeFilterResponses.filter((response) => {
-        const tagNames = response.tags.map((tag) => tag.name);
-        if (filter?.filterType?.filterComboBoxValue) {
-          if (filter?.filterType?.filterComboBoxValue === "Applied") {
-            if (filter?.questionType?.label) return tagNames.includes(filter.questionType.label);
+
+    if (filter.questionType?.label === "Language") {
+      if (filter?.filterType?.filterComboBoxValue && filter?.filterType?.filterComboBoxValue?.length > 0) {
+        toBeFilterResponses = toBeFilterResponses.filter((response) => {
+          const language = response.language;
+          if (!language) return false;
+          if (filter?.filterType?.filterComboBoxValue?.includes(language)) {
+            return true;
           }
-          if (filter?.filterType?.filterComboBoxValue === "Not applied") {
-            if (filter?.questionType?.label) return !tagNames.includes(filter?.questionType?.label);
-          }
-        }
+        });
+      } else {
         return true;
-      });
+      }
+    }
+    if (filter.questionType?.label === "Tags") {
+      if (filter?.filterType?.filterComboBoxValue && filter?.filterType?.filterComboBoxValue?.length > 0) {
+        toBeFilterResponses = toBeFilterResponses.filter((response) => {
+          const tagNames = response.tags.map((tag) => tag.name);
+          const filterTags = filter?.filterType?.filterComboBoxValue as string[];
+          if (filter?.filterType?.filterValue === "Includes all") {
+            // Check if all filter tags are included in the response's tags
+            return filterTags!.every((tag) => tagNames.includes(tag));
+          }
+          if (filter?.filterType?.filterValue === "Includes either") {
+            // Check if at least one of the filter tags is included in the response's tags
+            return filterTags!.some((tag) => tagNames.includes(tag));
+          }
+        });
+      } else {
+        return true;
+      }
     }
     if (filter.questionType?.type === "Attributes") {
       toBeFilterResponses = toBeFilterResponses.filter((response) => {
@@ -447,16 +511,23 @@ export const getFilterResponses = (
             response.personAttributes && Object.keys(response.personAttributes).length > 0
               ? response.personAttributes
               : null;
-          if (attributes && attributes.hasOwnProperty(filter?.questionType?.label)) {
+          if (
+            typeof filter?.questionType?.label === "string" &&
+            attributes &&
+            Object.prototype.hasOwnProperty.call(attributes, filter?.questionType?.label)
+          ) {
+            const attributeValue = attributes[filter?.questionType?.label];
+
             if (filter?.filterType?.filterValue === "Equals") {
-              return attributes[filter?.questionType?.label] === filter?.filterType?.filterComboBoxValue;
+              return attributeValue === filter?.filterType?.filterComboBoxValue;
             }
+
             if (filter?.filterType?.filterValue === "Not equals") {
-              return attributes[filter?.questionType?.label] !== filter?.filterType?.filterComboBoxValue;
+              return attributeValue !== filter?.filterType?.filterComboBoxValue;
             }
-          } else {
-            return false;
           }
+
+          return false;
         }
         return true;
       });

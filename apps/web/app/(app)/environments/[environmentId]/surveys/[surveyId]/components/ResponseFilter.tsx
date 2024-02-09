@@ -15,13 +15,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@formbricks/ui/Popover"
 import QuestionsComboBox, { OptionsType, QuestionOption } from "./QuestionsComboBox";
 
 export type QuestionFilterOptions = {
-  type: TSurveyTSurveyQuestionType | "Attributes" | "Tags";
+  type: TSurveyTSurveyQuestionType | "Attributes" | "Tags" | "Languages";
   filterOptions: string[];
   filterComboBoxOptions: string[];
   id: string;
 };
 
-const ResponseFilter = () => {
+const ResponseFilter = ({ defaultLanguageId }: { defaultLanguageId: string }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const { selectedFilter, setSelectedFilter, selectedOptions } = useResponseFilter();
 
@@ -169,12 +169,15 @@ const ResponseFilter = () => {
                   options={questionComboBoxOptions}
                   selected={s.questionType}
                   onChangeValue={(value) => handleOnChangeQuestionComboBoxValue(value, i)}
+                  defaultLanguageId={defaultLanguageId}
                 />
                 <QuestionFilterComboBox
                   key={`${s.questionType.id}-${i}`}
                   filterOptions={
                     selectedOptions.questionFilterOptions.find(
-                      (q) => q.type === s.questionType.type || q.type === s.questionType.questionType
+                      (q) =>
+                        (q.type === s.questionType.questionType || q.type === s.questionType.type) &&
+                        q.id === s.questionType.id
                     )?.filterOptions
                   }
                   filterComboBoxOptions={
@@ -195,6 +198,7 @@ const ResponseFilter = () => {
                   onChangeFilterComboBoxValue={(value) => handleOnChangeFilterComboBoxValue(value, i)}
                   onChangeFilterValue={(value) => handleOnChangeFilterValue(value, i)}
                   disabled={!s?.questionType?.label}
+                  defaultLanguageId={defaultLanguageId}
                 />
               </div>
               <div className="flex w-full items-center justify-end gap-1 md:w-auto">

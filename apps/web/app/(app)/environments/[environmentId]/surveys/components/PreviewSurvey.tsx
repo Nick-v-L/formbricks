@@ -29,7 +29,9 @@ interface PreviewSurveyProps {
   previewType?: TPreviewType;
   product: TProduct;
   environment: TEnvironment;
+  languageId: string;
   onFileUpload: (file: File, config?: TUploadFileConfig) => Promise<string>;
+  defaultLanguageId: string;
 }
 
 let surveyNameTemp;
@@ -67,7 +69,9 @@ export default function PreviewSurvey({
   previewType,
   product,
   environment,
+  languageId,
   onFileUpload,
+  defaultLanguageId,
 }: PreviewSurveyProps) {
   const [isModalOpen, setIsModalOpen] = useState(true);
   const [isFullScreenPreview, setIsFullScreenPreview] = useState(false);
@@ -212,7 +216,9 @@ export default function PreviewSurvey({
                     isBrandingEnabled={product.linkSurveyBranding}
                     onActiveQuestionChange={setActiveQuestionId}
                     isRedirectDisabled={true}
+                    languageId={languageId}
                     onFileUpload={onFileUpload}
+                    defaultLanguageId={defaultLanguageId}
                   />
                 </Modal>
               ) : (
@@ -225,7 +231,9 @@ export default function PreviewSurvey({
                       isBrandingEnabled={product.linkSurveyBranding}
                       onActiveQuestionChange={setActiveQuestionId}
                       onFileUpload={onFileUpload}
+                      languageId={languageId}
                       responseCount={42}
+                      defaultLanguageId={defaultLanguageId}
                     />
                   </div>
                 </div>
@@ -281,7 +289,9 @@ export default function PreviewSurvey({
                   isBrandingEnabled={product.linkSurveyBranding}
                   onActiveQuestionChange={setActiveQuestionId}
                   isRedirectDisabled={true}
+                  languageId={languageId}
                   onFileUpload={onFileUpload}
+                  defaultLanguageId={defaultLanguageId}
                 />
               </Modal>
             ) : (
@@ -295,7 +305,9 @@ export default function PreviewSurvey({
                     onActiveQuestionChange={setActiveQuestionId}
                     isRedirectDisabled={true}
                     onFileUpload={onFileUpload}
+                    languageId={languageId}
                     responseCount={42}
+                    defaultLanguageId={defaultLanguageId}
                   />
                 </div>
               </MediaBackground>
